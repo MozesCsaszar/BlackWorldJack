@@ -65,13 +65,15 @@ div {
 }
 
 #FSInfoBarEnemyGrid > .enemy_cell {
-    color:aliceblue;
-    text-align: center;
+    
     --FSIBEGEC-top-height: 18px;
     --FSIBEGEC-bot-height: 54px;
     display:grid;
+    color:aliceblue;
+    text-align: center;
     grid-template-columns: 177px 32px;
     grid-template-rows: var(--FSIBEGEC-top-height) var(--FSIBEGEC-bot-height);
+    cursor: default;
 }
 #FSInfoBarEnemyGrid > .enemy_cell > div > div{
     border: solid aqua 1px;
@@ -113,7 +115,6 @@ div {
     grid-row-end: 3;
     border-top-right-radius: var(--FS-border-rad);
     border-bottom-right-radius: var(--FS-border-rad);
-
 }
 
 #FSInfoBarEnemyGrid > .plan_countdown {
@@ -135,6 +136,7 @@ div {
     border-radius: var(--FS-border-rad);
     font-size: xx-large;
     font-weight: bolder;
+    cursor: default
 }
 #FSInfoBarEnemyGrid > .plan_countdown > .end_planning {
     
@@ -150,6 +152,7 @@ div {
     border-radius: var(--FS-border-rad);
     font-size: large;
     font-weight: bolder;
+    cursor: pointer;
 }
 
 #FightScreenActionBar {
@@ -213,6 +216,7 @@ div {
     vertical-align: middle;
     border: solid purple 3px;
     height: 16px;
+    cursor: pointer;
 }
 #FightScreenActionPlanBar > .action_card_space > .card_holder {
     
@@ -222,6 +226,8 @@ div {
     border: solid red 3px;
     width: var(--FSAPB-card-width);
     height: var(--FSAPB-card-height);
+    cursor: default;
+
 }
 
 #FightScreenActionPlanBar > .deck_holder {
@@ -239,4 +245,5 @@ div {
     align-content: center;
     border: solid purple 3px;
     border-radius: var(--FS-border-rad);
+    cursor: pointer;
 }
