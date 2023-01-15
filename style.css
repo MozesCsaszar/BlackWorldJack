@@ -1,0 +1,242 @@
+body {
+    display: flex;
+    align-items: center;
+    background-color: black;
+}
+
+div {
+    color: aliceblue;
+}
+
+/*                                                                FIGHT SCREEN                     */
+#FightScreen {
+    --FS-row1--height: 150px;
+    --FS-row2--height: 420px;
+    --FS-row3--height: 300px;
+    --FS-grid-row-gap: 10px;
+    --FS-grid-col-gap: 10px;
+    --FS-border-rad: 4px;
+    display:grid;
+    position: relative;
+    padding: 20px;
+    grid-row-gap: var(--FS-grid-row-gap);
+    grid-template-rows: var(--FS-row1--height) var(--FS-row2--height) var(--FS-row3--height);
+    grid-template-columns: 1400px;
+}
+
+#FightScreen > .bar {
+    display: grid;
+}
+
+#FightScreenInfoBar {
+    --FSIB-col1-width: 250px;
+    --FSIB-col2-width: 860px;
+    --FSIB-col3-width: 250px;
+    grid-row: 1;
+    align-content: space-between;
+    grid-template-rows: var(--FS-row1--height);
+    grid-template-columns: var(--FSIB-col1-width) var(--FSIB-col2-width) var(--FSIB-col3-width);
+    grid-column-gap: var(--FS-grid-col-gap);
+}
+
+#FSInfoBarStatusBars {
+    grid-column: 1;
+    display:flex;
+    flex-direction: column;
+    border: solid red 3px;
+}
+
+#FSInfoBarPlayerInfo {
+    grid-column: 3;
+    border: solid red 3px;
+}
+
+#FSInfoBarEnemyGrid {
+    grid-column: 2;
+    display:grid;
+    --FSIBEG-row-height: 72px;
+    --FSIBEG-col-width: 209px;
+    --FSIBEG-nr-cols: 4;
+    --FSIBEG-nr-rows: 2;
+    column-gap: 8px;
+    row-gap: 6px;
+    grid-template-rows: repeat(var(--FSIBEG-nr-rows), var(--FSIBEG-row-height));
+    grid-template-columns: repeat(var(--FSIBEG-nr-cols), var(--FSIBEG-col-width));
+}
+
+#FSInfoBarEnemyGrid > .enemy_cell {
+    color:aliceblue;
+    text-align: center;
+    --FSIBEGEC-top-height: 18px;
+    --FSIBEGEC-bot-height: 54px;
+    display:grid;
+    grid-template-columns: 177px 32px;
+    grid-template-rows: var(--FSIBEGEC-top-height) var(--FSIBEGEC-bot-height);
+}
+#FSInfoBarEnemyGrid > .enemy_cell > div > div{
+    border: solid aqua 1px;
+}
+#FSInfoBarEnemyGrid > .enemy_cell > .top {
+    grid-row: 1;
+    grid-column: 1;
+    display: flex;
+    height: var(--FSIBEGEC-top-height);
+}
+#FSInfoBarEnemyGrid > .enemy_cell > .top > .number{
+    display:grid;
+    align-items: center;
+    vertical-align: middle;
+    width: 16px;
+    border-top-left-radius: var(--FS-border-rad);
+
+}
+#FSInfoBarEnemyGrid > .enemy_cell > .top > .name{
+    display:grid;
+    align-items: center;
+    vertical-align: middle;
+    width: 193px;
+}
+#FSInfoBarEnemyGrid > .enemy_cell > .desc{
+    display:inherit;
+    border: solid aqua 1px;
+    align-items: center;
+    vertical-align: middle;
+    grid-row: 2;
+    grid-column: 1;
+    border-bottom-left-radius: var(--FS-border-rad);
+
+}
+#FSInfoBarEnemyGrid > .enemy_cell > .mods{
+    border: solid aqua 1px;
+    grid-column: 2;
+    grid-row-start: 1;
+    grid-row-end: 3;
+    border-top-right-radius: var(--FS-border-rad);
+    border-bottom-right-radius: var(--FS-border-rad);
+
+}
+
+#FSInfoBarEnemyGrid > .plan_countdown {
+    grid-column-start: 2;
+    grid-column-end: 4;
+    display: flex;
+    column-gap: 2px;
+}
+#FSInfoBarEnemyGrid > .plan_countdown > .timer {
+    
+    color:aliceblue;
+    text-align: center;
+    
+    display: grid;
+    align-items: center;
+    vertical-align: middle;
+    width: 272px;
+    border: solid aqua 1px;
+    border-radius: var(--FS-border-rad);
+    font-size: xx-large;
+    font-weight: bolder;
+}
+#FSInfoBarEnemyGrid > .plan_countdown > .end_planning {
+    
+    color:aliceblue;
+    text-align: center;
+    grid-column-start: 2;
+    grid-column-end: 4;
+    display: grid;
+    align-items: center;
+    vertical-align: middle;
+    width: 75px;
+    border: solid purple 3px;
+    border-radius: var(--FS-border-rad);
+    font-size: large;
+    font-weight: bolder;
+}
+
+#FightScreenActionBar {
+    --FSAB-col1-width: 250px;
+    --FSAB-col2-width: 860px;
+    --FSAB-col3-width: 250px;
+    display: grid;
+    grid-template-columns: var(--FSAB-col1-width) var(--FSAB-col2-width) var(--FSAB-col3-width);
+    grid-column-gap: var(--FS-grid-col-gap);
+}
+
+#FSActionBarSpellActions {
+    grid-column: 1;
+    border: solid red 3px;
+}
+
+#FSActionBarAreaGrid {
+    display: grid;
+    grid-column: 2;
+    --FSABAG-nr-cols: 10;
+    --FSABAG-nr-rows: 7;
+    --FSABAG-cell-widht: 80px;
+    --FSABAG-cell-height: 60px;
+    grid-template-rows: repeat(var(--FSABAG-nr-rows), var(--FSABAG-cell-height));
+    grid-template-columns: repeat(var(--FSABAG-nr-cols), var(--FSABAG-cell-widht));
+    padding-left: 30px;
+}
+
+#FSActionBarAreaGrid > .cell {
+    border: solid green 2px;
+}
+
+#FSActionBarOtherActions {
+    grid-column: 3;
+    border: solid red 3px;
+}
+
+#FightScreenActionPlanBar {
+    display:grid;
+    --FSACB-row-height: 150px;
+    --FSACB-col-width: 272px;
+    --FSACB-nr-rows: 2;
+    --FSACB-nr-cols: 5;
+    --FSAPB-card-width: 90px;
+    --FSAPB-card-height: 126px;
+    --FSAPB-deck-width: 80px;
+    --FSAPB-deck-height: 112px;
+    column-gap: var(--FS-grid-col-gap);
+    row-gap: var(--FS-grid-row-gap);
+    grid-template-rows: repeat(var(--FSACB-nr-rows), var(--FSACB-row-height));
+    grid-template-columns: repeat(var(--FSACB-nr-cols), var(--FSACB-col-width));
+}
+
+#FightScreenActionPlanBar > .action_card_space {
+    display: flex;
+    flex-direction: column;
+}
+#FightScreenActionPlanBar > .action_card_space > .action {
+    display: grid;
+    text-align: center;
+    vertical-align: middle;
+    border: solid purple 3px;
+    height: 16px;
+}
+#FightScreenActionPlanBar > .action_card_space > .card_holder {
+    
+    display: flex;
+}
+#FightScreenActionPlanBar > .action_card_space > .card_holder > .card {
+    border: solid red 3px;
+    width: var(--FSAPB-card-width);
+    height: var(--FSAPB-card-height);
+}
+
+#FightScreenActionPlanBar > .deck_holder {
+    grid-column-start: 2;
+    grid-column-end: 5;
+    display: flex;
+    column-gap: var(--FS-grid-col-gap);
+    justify-content: space-around;
+}
+#FightScreenActionPlanBar > .deck_holder > .deck {
+    width: var(--FSAPB-deck-width);
+    height: var(--FSAPB-deck-height);
+    display: grid;
+    text-align: center;
+    align-content: center;
+    border: solid purple 3px;
+    border-radius: var(--FS-border-rad);
+}
