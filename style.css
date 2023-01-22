@@ -1,7 +1,11 @@
 body {
+    --DEF-background-color: black;
+    --DEF-save-level0-sep: "\\e\\";
+
     display: flex;
     align-items: center;
-    background-color: black;
+    background-color: var(--DEF-background-color);
+    user-select: none;
 }
 
 div {
@@ -192,8 +196,8 @@ div {
 
 #FightScreenActionPlanBar {
     display:grid;
-    --FSACB-row-height: 150px;
-    --FSACB-col-width: 272px;
+    --FSACB-row-height: 160px;
+    --FSACB-col-width: 268px;
     --FSACB-nr-rows: 2;
     --FSACB-nr-cols: 5;
     --FSAPB-card-width: 90px;
@@ -207,8 +211,12 @@ div {
 }
 
 #FightScreenActionPlanBar > .action_card_space {
+    --FSAPBACS-actoin-height: 16px;
+    --FSAPBACS-card_holder-height: calc(var(--FSACB-row-height) - var(--FSAPBACS-actoin-height));
+    border: dashed purple 5px;
     display: flex;
     flex-direction: column;
+    height: var(--FSABAG-nr-rows);
 }
 #FightScreenActionPlanBar > .action_card_space > .action {
     display: grid;
@@ -217,22 +225,39 @@ div {
     border: solid purple 3px;
     height: 16px;
     cursor: pointer;
+    pointer-events: none;
 }
 #FightScreenActionPlanBar > .action_card_space > .card_holder {
-    
+    position: relative;
     display: flex;
+    pointer-events: none;
+    height: var(--FSAPBACS-card_holder-height);
 }
 #FightScreenActionPlanBar > .action_card_space > .card_holder > .card {
+    position: absolute;
     border: solid red 3px;
+    border-radius: calc(var(--FS-border-rad) * 1.5);
     width: var(--FSAPB-card-width);
     height: var(--FSAPB-card-height);
+    background-color: var(--DEF-background-color);
     cursor: default;
-
 }
 
+#FSActionPlanBarDragCard {
+    position: absolute;
+    display: none;
+    background-color: var(--DEF-background-color);
+    border: solid red 3px;
+    border-radius: calc(var(--FS-border-rad) * 1.5);
+    width: var(--FSAPB-card-width);
+    height: var(--FSAPB-card-height);
+    cursor: grabbing;
+    pointer-events: none;
+}
 #FightScreenActionPlanBar > .deck_holder {
     grid-column-start: 2;
     grid-column-end: 5;
+    grid-row: 2;
     display: flex;
     column-gap: var(--FS-grid-col-gap);
     justify-content: space-around;
