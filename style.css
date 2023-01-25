@@ -124,6 +124,7 @@ div {
 #FSInfoBarEnemyGrid > .plan_countdown {
     grid-column-start: 2;
     grid-column-end: 4;
+    grid-row: 2;
     display: flex;
     column-gap: 2px;
 }
@@ -181,12 +182,19 @@ div {
     --FSABAG-cell-widht: 80px;
     --FSABAG-cell-height: 60px;
     grid-template-rows: repeat(var(--FSABAG-nr-rows), var(--FSABAG-cell-height));
-    grid-template-columns: repeat(var(--FSABAG-nr-cols), var(--FSABAG-cell-widht));
-    padding-left: 30px;
+    padding-left: 15px;
 }
 
-#FSActionBarAreaGrid > .cell {
+#FSActionBarAreaGrid > .row {
+    display: flex;
+    flex-direction: row;
+    position: relative;
+}
+
+#FSActionBarAreaGrid > .row > .cell {
     border: solid green 2px;
+    width: var(--FSABAG-cell-widht);
+    transform: skewX(-25deg);
 }
 
 #FSActionBarOtherActions {

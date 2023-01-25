@@ -1,3 +1,4 @@
+/*                                      Util Namespaces */
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = function (d, b) {
         extendStatics = Object.setPrototypeOf ||
@@ -20,6 +21,17 @@ var MathUtil;
     }
     MathUtil.getRandomIntBelow = getRandomIntBelow;
 })(MathUtil || (MathUtil = {}));
+var StringUtil;
+(function (StringUtil) {
+    function padRightUntilLength(str, length, char) {
+        while (str.length < length) {
+            str = char + str;
+        }
+        return str;
+    }
+    StringUtil.padRightUntilLength = padRightUntilLength;
+})(StringUtil || (StringUtil = {}));
+/*                                      Underlying Classes */
 var ManaTypes;
 (function (ManaTypes) {
     ManaTypes[ManaTypes["neutral"] = 0] = "neutral";
@@ -217,12 +229,21 @@ var Hand = /** @class */ (function () {
         enumerable: false,
         configurable: true
     });
+    Hand.prototype.get = function (i) {
+        if (i >= this._cards.length) {
+            return null;
+        }
+        return this._cards[i];
+    };
     Hand.prototype.addCard = function (card) {
         //add a new card to the hand; card not copied
         this._cards.push(card);
     };
     Hand.prototype.popCard = function () {
         this._cards.pop();
+    };
+    Hand.prototype.reset = function () {
+        this._cards = [];
     };
     return Hand;
 }());
@@ -303,7 +324,8 @@ var HandGUI = /** @class */ (function () {
         configurable: true
     });
     HandGUI.prototype.update = function () {
-        this._cardGUIs.forEach(function (e) { return e.update(); });
+        var _this = this;
+        this._cardGUIs.forEach(function (e, i) { return e.card = _this._hand.get(i); });
     };
     HandGUI.prototype.addCard = function (card) {
         this._cardGUIs[this._hand.length].card = card;
@@ -326,6 +348,10 @@ var HandGUI = /** @class */ (function () {
         this._cardGUIs.forEach(function (e, i) {
             e.setLeft(i * 20.96);
         });
+    };
+    HandGUI.prototype.resetFightRound = function () {
+        this._hand.reset();
+        this.update();
     };
     HandGUI._divClass = ".card_holder";
     return HandGUI;
@@ -407,6 +433,10 @@ var ActionGUI = /** @class */ (function () {
     };
     ActionGUI.prototype.addCard = function (card) {
         this._handGUI.addCard(card);
+    };
+    ActionGUI.prototype.resetFightRound = function () {
+        this._handGUI.resetFightRound();
+        this.update();
     };
     ActionGUI._divClass = ".action_card_space";
     return ActionGUI;
@@ -533,7 +563,7 @@ var DeckGUI = /** @class */ (function () {
         this._div.addEventListener("mousedown", function (e) { return c_obj.onMouseDown(e, c_obj); });
     };
     DeckGUI.prototype.onMouseDown = function (e, c_obj) {
-        if (!FightScreenActionPlanBarGUI._finalAll) {
+        if (!ActionPlanBarGUI._finalAll && !FightScreenGUI.dragging) {
             var c = c_obj._deck.draw();
             DeckGUI._dragCardGUI.card = c;
             var left = c_obj._div.getBoundingClientRect().left - 12;
@@ -547,6 +577,9 @@ var DeckGUI = /** @class */ (function () {
     };
     DeckGUI.prototype.hide = function () {
         this._div.style.display = 'none';
+    };
+    DeckGUI.prototype.resetFightRound = function () {
+        this.setContentSuitsValuesMana(Deck.suits, Deck.values);
     };
     DeckGUI._divClass = ".deck";
     DeckGUI._dragCardGUI = new DragCardGUI(document.getElementById('FSActionPlanBarDragCard'));
@@ -566,6 +599,10 @@ var DeckHolderGUI = /** @class */ (function () {
         var _this = this;
         this._deckGUIs.forEach(function (e, i) { i < _this._currentDeckGUIs ? e.show() : e.hide(); });
     };
+    DeckHolderGUI.prototype.resetFightRound = function () {
+        var _this = this;
+        this._deckGUIs.forEach(function (e, i) { i < _this._currentDeckGUIs ? e.resetFightRound() : null; });
+    };
     DeckHolderGUI._divClass = ".deck_holder";
     return DeckHolderGUI;
 }());
@@ -579,37 +616,343 @@ var ActionHolderGUI = /** @class */ (function () {
         var foundNotFinal = false;
         ActionHolderGUI._actionGUIs.forEach(function (e, i) {
             if (!e.final && i < ActionHolderGUI._currentActionGUIs) {
-                FightScreenActionPlanBarGUI._finalAll = false;
+                ActionPlanBarGUI._finalAll = false;
                 foundNotFinal = true;
                 return;
             }
         });
         if (!foundNotFinal) {
-            FightScreenActionPlanBarGUI._finalAll = true;
+            ActionPlanBarGUI._finalAll = true;
         }
     };
     ActionHolderGUI.prototype.update = function () {
         ActionHolderGUI._actionGUIs.forEach(function (e, i) { i < ActionHolderGUI._currentActionGUIs ? e.show() : e.hide(); });
     };
-    ActionHolderGUI._currentActionGUIs = 2;
+    ActionHolderGUI.prototype.resetFightRound = function () {
+        ActionHolderGUI._actionGUIs.forEach(function (e, i) {
+            if (i < ActionHolderGUI._currentActionGUIs) {
+                e.resetFightRound();
+            }
+            ;
+        });
+        ActionHolderGUI.setFinalAll();
+    };
+    ActionHolderGUI._currentActionGUIs = 7;
     ActionHolderGUI._actionGUIs = [];
     return ActionHolderGUI;
 }());
-var FightScreenActionPlanBarGUI = /** @class */ (function () {
-    function FightScreenActionPlanBarGUI() {
-        this._currentActionGUIs = 0;
+var ActionPlanBarGUI = /** @class */ (function () {
+    function ActionPlanBarGUI() {
         this._deckHolderGUI = new DeckHolderGUI();
-        this._actionHolderGUI = new ActionHolderGUI(FightScreenActionPlanBarGUI._divID);
+        this._actionHolderGUI = new ActionHolderGUI(ActionPlanBarGUI._divID);
     }
-    FightScreenActionPlanBarGUI._divID = '#FightScreenActionPlanBar';
-    FightScreenActionPlanBarGUI._finalAll = false;
-    return FightScreenActionPlanBarGUI;
+    ActionPlanBarGUI.prototype.resetFightRound = function () {
+        this._deckHolderGUI.resetFightRound();
+        this._actionHolderGUI.resetFightRound();
+    };
+    ActionPlanBarGUI._divID = '#FightScreenActionPlanBar';
+    ActionPlanBarGUI._finalAll = false;
+    return ActionPlanBarGUI;
+}());
+var AreaGridCellGUI = /** @class */ (function () {
+    function AreaGridCellGUI(div) {
+        this._div = div;
+    }
+    Object.defineProperty(AreaGridCellGUI, "classFullPath", {
+        get: function () {
+            return AreaGridRowGUI.classFullPath + ">" + this._divClass;
+        },
+        enumerable: false,
+        configurable: true
+    });
+    AreaGridCellGUI._divClass = ".cell";
+    return AreaGridCellGUI;
+}());
+var AreaGridRowGUI = /** @class */ (function () {
+    function AreaGridRowGUI(div, nr, offset_ind) {
+        var _this = this;
+        this._cellGUIs = [];
+        this._div = div;
+        this._div.style.left = (offset_ind * AreaGridRowGUI._rowOffset).toString() + "px";
+        document.querySelectorAll(AreaGridRowGUI.classFullPath + "._" + nr + ">" + AreaGridCellGUI._divClass).forEach(function (e) { return _this._cellGUIs.push(new AreaGridCellGUI(e)); });
+        console.log(this._cellGUIs, AreaGridRowGUI.classFullPath + "._" + nr + AreaGridCellGUI._divClass);
+    }
+    Object.defineProperty(AreaGridRowGUI, "classFullPath", {
+        get: function () {
+            return ActionBarAreaGridGUI.fullPath + ">" + this._divClass;
+        },
+        enumerable: false,
+        configurable: true
+    });
+    AreaGridRowGUI._divClass = ".row";
+    AreaGridRowGUI._rowOffset = 28;
+    return AreaGridRowGUI;
+}());
+var ActionBarAreaGridGUI = /** @class */ (function () {
+    function ActionBarAreaGridGUI() {
+        var _this = this;
+        this._rowGUIs = [];
+        if (ActionBarAreaGridGUI._nrInstances > 0) {
+            throw "ActionBarAreaGridGUI already has an instance running!";
+        }
+        ActionBarAreaGridGUI._nrInstances += 1;
+        this._div = document.getElementById(ActionBarAreaGridGUI._divID);
+        console.log(AreaGridRowGUI.classFullPath);
+        document.querySelectorAll(AreaGridRowGUI.classFullPath).forEach(function (e, i, l) { _this._rowGUIs.push(new AreaGridRowGUI(e, i, l.length - i - 1)); });
+    }
+    Object.defineProperty(ActionBarAreaGridGUI, "fullPath", {
+        get: function () {
+            return ActionBarGUI.fullPath + ">#" + this._divID;
+        },
+        enumerable: false,
+        configurable: true
+    });
+    ActionBarAreaGridGUI._divID = "FSActionBarAreaGrid";
+    ActionBarAreaGridGUI._nrInstances = 0;
+    return ActionBarAreaGridGUI;
+}());
+var ActionBarGUI = /** @class */ (function () {
+    function ActionBarGUI() {
+        if (ActionBarGUI._nrInstances > 0) {
+            throw "InfoBarGUI already has an instance running!";
+        }
+        ActionBarGUI._nrInstances += 1;
+        this._areaGridGUI = new ActionBarAreaGridGUI();
+        this._div = document.getElementById(ActionBarGUI._divID);
+    }
+    Object.defineProperty(ActionBarGUI, "fullPath", {
+        get: function () {
+            return FightScreenGUI.fullPath + ">#" + this._divID;
+        },
+        enumerable: false,
+        configurable: true
+    });
+    ActionBarGUI._divID = "FightScreenActionBar";
+    ActionBarGUI._nrInstances = 0;
+    return ActionBarGUI;
+}());
+var InfoBarStatusBarsGUI = /** @class */ (function () {
+    function InfoBarStatusBarsGUI() {
+        if (InfoBarStatusBarsGUI._nrInstances > 0) {
+            throw "InfoBarStatusBarsGUI already has an instance running!";
+        }
+        InfoBarStatusBarsGUI._nrInstances += 1;
+        this._div = document.getElementById(InfoBarStatusBarsGUI._divID);
+    }
+    InfoBarStatusBarsGUI.prototype.resetFightRound = function () {
+    };
+    InfoBarStatusBarsGUI._divID = "FSInfoBarStatusBars";
+    InfoBarStatusBarsGUI._nrInstances = 0;
+    return InfoBarStatusBarsGUI;
+}());
+var EnemyGridGUI = /** @class */ (function () {
+    function EnemyGridGUI(div) {
+        this._div = div;
+        if (EnemyGridGUI._divDisplay == null) {
+            EnemyGridGUI._divDisplay = this._div.style.display;
+        }
+    }
+    EnemyGridGUI.prototype.show = function () {
+        this._div.style.display = EnemyGridGUI._divDisplay;
+    };
+    EnemyGridGUI.prototype.hide = function () {
+        this._div.style.display = 'none';
+    };
+    EnemyGridGUI._divClass = ".enemy_cell";
+    EnemyGridGUI._divDisplay = null;
+    return EnemyGridGUI;
+}());
+var TimerGridStopPlanningGUI = /** @class */ (function () {
+    function TimerGridStopPlanningGUI(div) {
+        this._div = div;
+        this.setUpEventListeners();
+    }
+    Object.defineProperty(TimerGridStopPlanningGUI, "classFullPath", {
+        get: function () {
+            return EnemyGridTimerGridGUI.fullPath + ">" + this._divClass;
+        },
+        enumerable: false,
+        configurable: true
+    });
+    TimerGridStopPlanningGUI.prototype.setUpEventListeners = function () {
+        var _this = this;
+        var c_obj = this;
+        c_obj._div.addEventListener('mousedown', function (e) { return _this.onMouseDown(e, c_obj); });
+    };
+    TimerGridStopPlanningGUI.prototype.onMouseDown = function (e, c_obj) {
+        FightScreenGUI.resetFightRound();
+    };
+    TimerGridStopPlanningGUI._divClass = ".end_planning";
+    return TimerGridStopPlanningGUI;
+}());
+var TimerGridTimerGUI = /** @class */ (function () {
+    function TimerGridTimerGUI() {
+        this._timerIntervalID = null;
+        this._div = document.querySelector(TimerGridTimerGUI.fullPath);
+    }
+    Object.defineProperty(TimerGridTimerGUI, "fullPath", {
+        get: function () {
+            return EnemyGridTimerGridGUI.fullPath + ">" + this._divClass;
+        },
+        enumerable: false,
+        configurable: true
+    });
+    TimerGridTimerGUI.prototype.setTime = function (sep) {
+        if (sep === void 0) { sep = ":"; }
+        var time = this._timer;
+        var msec = (time % 1000).toString();
+        msec = StringUtil.padRightUntilLength(msec, 3, '0');
+        time = Math.floor(time / 1000);
+        var sec = (time % 60).toString();
+        sec = StringUtil.padRightUntilLength(sec, 2, '0');
+        time = Math.floor(time / 60);
+        var min = (time % 60).toString();
+        min = StringUtil.padRightUntilLength(min, 2, '0');
+        this._div.innerHTML = min + sep + sec + sep + msec;
+    };
+    TimerGridTimerGUI.prototype.resetTimer = function (time) {
+        this._timer = time;
+    };
+    TimerGridTimerGUI.prototype.stopTimer = function () {
+        if (this._timerIntervalID != null) {
+            clearInterval(this._timerIntervalID);
+            this._timerIntervalID = null;
+        }
+    };
+    TimerGridTimerGUI.prototype.startTimer = function () {
+        var _this = this;
+        if (this._timerIntervalID == null) {
+            this._timerIntervalID = setInterval(function () { _this._timer -= 33; _this.setTime(); }, 33);
+        }
+    };
+    TimerGridTimerGUI._divClass = ".timer";
+    return TimerGridTimerGUI;
+}());
+var EnemyGridTimerGridGUI = /** @class */ (function () {
+    function EnemyGridTimerGridGUI() {
+        var _this = this;
+        this._stopPlanningGUIs = [];
+        this._maxTime = 30 * 1000;
+        this._div = document.querySelector(EnemyGridTimerGridGUI.fullPath);
+        document.querySelectorAll(TimerGridStopPlanningGUI.classFullPath).forEach(function (e) { return _this._stopPlanningGUIs.push(new TimerGridStopPlanningGUI(e)); });
+        this._timerGUI = new TimerGridTimerGUI();
+        this.setUp();
+    }
+    Object.defineProperty(EnemyGridTimerGridGUI, "fullPath", {
+        get: function () {
+            return InfoBarEnemyGridGUI.fullPath + ">" + this._divClass;
+        },
+        enumerable: false,
+        configurable: true
+    });
+    EnemyGridTimerGridGUI.prototype.setUp = function () {
+        this.reset();
+        this._timerGUI.startTimer();
+        this.update();
+    };
+    EnemyGridTimerGridGUI.prototype.reset = function () {
+        this._timerGUI.resetTimer(this._maxTime);
+    };
+    EnemyGridTimerGridGUI.prototype.resetFightRound = function () {
+        this._maxTime -= 500;
+        this._timerGUI.resetTimer(this._maxTime);
+    };
+    EnemyGridTimerGridGUI.prototype.update = function () {
+    };
+    EnemyGridTimerGridGUI._divClass = ".plan_countdown";
+    return EnemyGridTimerGridGUI;
+}());
+var InfoBarEnemyGridGUI = /** @class */ (function () {
+    function InfoBarEnemyGridGUI() {
+        var _this = this;
+        this._enemyGrindGUIs = [];
+        if (InfoBarEnemyGridGUI._nrInstances > 0) {
+            throw "InfoBarEnemyGridGUI already has an instance running!";
+        }
+        InfoBarEnemyGridGUI._nrInstances += 1;
+        this._div = document.getElementById(InfoBarEnemyGridGUI._divID);
+        document.querySelectorAll(InfoBarEnemyGridGUI.fullPath + ">" + EnemyGridGUI._divClass).forEach(function (e) { return _this._enemyGrindGUIs.push(new EnemyGridGUI(e)); });
+        this._timerGridGUI = new EnemyGridTimerGridGUI();
+        this.update();
+    }
+    Object.defineProperty(InfoBarEnemyGridGUI, "fullPath", {
+        get: function () {
+            return InfoBarGUI.fullPath + ">#" + InfoBarEnemyGridGUI._divID;
+        },
+        enumerable: false,
+        configurable: true
+    });
+    InfoBarEnemyGridGUI.prototype.update = function () {
+        this._enemyGrindGUIs.forEach(function (e, i) { i < InfoBarEnemyGridGUI._nrEnemyGridGUIs ? e.show() : e.hide(); });
+    };
+    InfoBarEnemyGridGUI.prototype.resetTimer = function () {
+        this._timerGridGUI.reset();
+    };
+    InfoBarEnemyGridGUI.prototype.resetFightRound = function () {
+        this._timerGridGUI.resetFightRound();
+    };
+    InfoBarEnemyGridGUI._divID = "FSInfoBarEnemyGrid";
+    InfoBarEnemyGridGUI._nrInstances = 0;
+    InfoBarEnemyGridGUI._nrEnemyGridGUIs = 1;
+    return InfoBarEnemyGridGUI;
+}());
+var InfoBarPlayerInfoGUI = /** @class */ (function () {
+    function InfoBarPlayerInfoGUI() {
+        if (InfoBarPlayerInfoGUI._nrInstances > 0) {
+            throw "InfoBarPlayerInfoGUI already has an instance running!";
+        }
+        InfoBarPlayerInfoGUI._nrInstances += 1;
+        this._div = document.getElementById(InfoBarPlayerInfoGUI._divID);
+    }
+    InfoBarPlayerInfoGUI.prototype.resetFightRound = function () {
+    };
+    InfoBarPlayerInfoGUI._divID = "FSInfOBarPlayerInfo";
+    InfoBarPlayerInfoGUI._nrInstances = 0;
+    return InfoBarPlayerInfoGUI;
+}());
+var InfoBarGUI = /** @class */ (function () {
+    function InfoBarGUI() {
+        if (InfoBarGUI._nrInstances > 0) {
+            throw "InfoBarGUI already has an instance running!";
+        }
+        InfoBarGUI._nrInstances += 1;
+        this._div = document.getElementById(InfoBarGUI._divID);
+        this._statusBarsGUI = new InfoBarStatusBarsGUI();
+        this._enemyGridGUI = new InfoBarEnemyGridGUI();
+        this._playerInfoGUI = new InfoBarPlayerInfoGUI();
+    }
+    Object.defineProperty(InfoBarGUI, "fullPath", {
+        get: function () {
+            return FightScreenGUI.fullPath + ">#" + InfoBarGUI._divID;
+        },
+        enumerable: false,
+        configurable: true
+    });
+    InfoBarGUI.prototype.resetFightRound = function () {
+        this._statusBarsGUI.resetFightRound();
+        this._enemyGridGUI.resetFightRound();
+        this._playerInfoGUI.resetFightRound();
+    };
+    InfoBarGUI._divID = "FightScreenInfoBar";
+    InfoBarGUI._nrInstances = 0;
+    return InfoBarGUI;
 }());
 var FightScreenGUI = /** @class */ (function () {
     function FightScreenGUI() {
+        FightScreenGUI._self = this;
         this._div = document.getElementById(FightScreenGUI._divID);
+        this._infoBarGUI = new InfoBarGUI();
+        this._actionBarGUI = new ActionBarGUI();
+        this._actoinPlanBarGUI = new ActionPlanBarGUI();
         this.setUpEventListeners();
     }
+    Object.defineProperty(FightScreenGUI, "fullPath", {
+        get: function () {
+            return "#" + FightScreenGUI._divID;
+        },
+        enumerable: false,
+        configurable: true
+    });
     Object.defineProperty(FightScreenGUI, "dragging", {
         get: function () {
             return this._dragging;
@@ -687,6 +1030,9 @@ var FightScreenGUI = /** @class */ (function () {
             this._dragObj = null;
         }
     };
+    FightScreenGUI.resetFightRound = function () {
+        this._self.resetFightRound();
+    };
     FightScreenGUI.prototype.setUpEventListeners = function () {
         var c_obj = this;
         this._div.addEventListener('mousemove', function (e) { return c_obj.onMouseMove(e, c_obj); });
@@ -696,6 +1042,10 @@ var FightScreenGUI = /** @class */ (function () {
             FightScreenGUI._dragObj.moveWithMouse(e);
         }
     };
+    FightScreenGUI.prototype.resetFightRound = function () {
+        this._infoBarGUI.resetFightRound();
+        this._actoinPlanBarGUI.resetFightRound();
+    };
     FightScreenGUI._divID = "FightScreen";
     FightScreenGUI._dragging = false;
     FightScreenGUI._releasableDrag = null;
@@ -704,6 +1054,5 @@ var FightScreenGUI = /** @class */ (function () {
     FightScreenGUI._dragObj = null;
     return FightScreenGUI;
 }());
-var fSAPBGUI = new FightScreenActionPlanBarGUI();
 var FSGUI = new FightScreenGUI();
 //# sourceMappingURL=main.js.map

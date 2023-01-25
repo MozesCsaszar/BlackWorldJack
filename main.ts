@@ -1,8 +1,20 @@
+/*                                      Util Namespaces */
+
 namespace MathUtil {
     export function getRandomIntBelow(max: number): number {
         return Math.floor(Math.random() * max);
     }
 }
+namespace StringUtil {
+    export function padRightUntilLength(str: string, length: number, char: string): string {
+        while (str.length < length) {
+            str = char + str;
+        }
+        return str;
+    }
+}
+
+/*                                      Underlying Classes */
 
 enum ManaTypes {
     neutral,
@@ -155,12 +167,21 @@ class Hand {
         return this.value >= 21;
     }
 
+    get(i: number): Card {
+        if (i >= this._cards.length) {
+            return null;
+        }
+        return this._cards[i];
+    }
     addCard(card: Card): void {
         //add a new card to the hand; card not copied
         this._cards.push(card);
     }
     popCard(): void {
         this._cards.pop();
+    }
+    reset() {
+        this._cards = [];
     }
 }
 
@@ -231,11 +252,10 @@ class HandGUI {
         return this.busted || this._hand.final;
     }
     update(): void {
-        this._cardGUIs.forEach(e => e.update());
+        this._cardGUIs.forEach((e, i) => e.card = this._hand.get(i));
     }
     addCard(card: Card): void {
         this._cardGUIs[this._hand.length].card = card;
-        
     }
     addTempCard(card: Card): void {
         //visual and deck changes
@@ -255,6 +275,10 @@ class HandGUI {
         this._cardGUIs.forEach((e: CardGUI, i: number) => {
             e.setLeft(i * 20.96);
         });
+    }
+    resetFightRound(): void {
+        this._hand.reset();
+        this.update();
     }
 }
 
@@ -276,6 +300,7 @@ class ActionGUI {
     get final(): boolean {
         return this.busted || this._handGUI.final;
     }
+
     setUpEventListeners() {
         let c_obj: ActionGUI = this;
         c_obj._div.addEventListener('mouseenter', (e: MouseEvent) => c_obj.onMouseEnter(e, c_obj));
@@ -332,6 +357,10 @@ class ActionGUI {
     }
     addCard(card: Card): void {
         this._handGUI.addCard(card);
+    }
+    resetFightRound(): void {
+        this._handGUI.resetFightRound();
+        this.update();
     }
 
 }
@@ -436,7 +465,7 @@ class DeckGUI {
         this._div.addEventListener("mousedown", (e: MouseEvent) => c_obj.onMouseDown(e, c_obj));
     }
     onMouseDown(e: MouseEvent, c_obj: DeckGUI): void {
-        if(!FightScreenActionPlanBarGUI._finalAll) {
+        if(!ActionPlanBarGUI._finalAll && !FightScreenGUI.dragging) {
             let c: Card = c_obj._deck.draw();
             DeckGUI._dragCardGUI.card = c;
             let left: number = c_obj._div.getBoundingClientRect().left - 12 ;
@@ -450,6 +479,9 @@ class DeckGUI {
     }
     hide(): void {
         this._div.style.display = 'none';
+    }
+    resetFightRound(): void {
+        this.setContentSuitsValuesMana(Deck.suits, Deck.values);
     }
 }
 
@@ -472,11 +504,16 @@ class DeckHolderGUI {
             (e:DeckGUI, i:number) => {i < this._currentDeckGUIs ? e.show() : e.hide();}
         );
     }
+    resetFightRound(): void {
+        this._deckGUIs.forEach(
+            (e:DeckGUI, i:number) => {i < this._currentDeckGUIs ? e.resetFightRound() : null;}
+        );
+    }
 }
 
 class ActionHolderGUI {
 
-    private static _currentActionGUIs: number = 2;
+    private static _currentActionGUIs: number = 7;
     private static _actionGUIs: ActionGUI[] = [];
 
     constructor(superDivID: string) {
@@ -490,13 +527,13 @@ class ActionHolderGUI {
         let foundNotFinal: boolean = false;
         ActionHolderGUI._actionGUIs.forEach((e, i) => {
             if(!e.final && i < ActionHolderGUI._currentActionGUIs) {
-                FightScreenActionPlanBarGUI._finalAll = false;
+                ActionPlanBarGUI._finalAll = false;
                 foundNotFinal = true;
                 return;
             }
         });
         if(!foundNotFinal) {
-            FightScreenActionPlanBarGUI._finalAll = true;
+            ActionPlanBarGUI._finalAll = true;
         }
     }
     update(): void {
@@ -504,21 +541,324 @@ class ActionHolderGUI {
             (e:ActionGUI, i:number) => {i < ActionHolderGUI._currentActionGUIs ? e.show() : e.hide();}
         );
     }
+    resetFightRound(): void {
+        ActionHolderGUI._actionGUIs.forEach(
+            (e:ActionGUI, i:number) => {
+                if(i < ActionHolderGUI._currentActionGUIs) { e.resetFightRound(); };
+            }
+        );
+        ActionHolderGUI.setFinalAll();
+    }
 }
 
-class FightScreenActionPlanBarGUI {
+class ActionPlanBarGUI {
+    
     static readonly _divID: string = '#FightScreenActionPlanBar';
     static _finalAll: boolean = false;
 
-    private _currentActionGUIs: number = 0;
     private _deckHolderGUI: DeckHolderGUI;
     private _actionHolderGUI: ActionHolderGUI;
 
     constructor() {
         this._deckHolderGUI = new DeckHolderGUI();
-        this._actionHolderGUI = new ActionHolderGUI(FightScreenActionPlanBarGUI._divID);
+        this._actionHolderGUI = new ActionHolderGUI(ActionPlanBarGUI._divID);
+    }
+    resetFightRound():void  {
+        this._deckHolderGUI.resetFightRound();
+        this._actionHolderGUI.resetFightRound();
     }
 }
+
+class AreaGridCellGUI {
+    static readonly _divClass: string = ".cell";
+    static get classFullPath(): string {
+        return AreaGridRowGUI.classFullPath + ">" + this._divClass;
+    }
+
+    private _div: HTMLElement;
+    constructor(div: HTMLElement) {
+        this._div = div;
+    }
+}
+
+class AreaGridRowGUI {
+    static readonly _divClass: string = ".row";
+    private static readonly _rowOffset: number = 28;
+    static get classFullPath(): string {
+        return ActionBarAreaGridGUI.fullPath + ">" + this._divClass;
+    }
+
+    private _div: HTMLElement;
+    private _cellGUIs: AreaGridCellGUI[] = [];
+    constructor(div: HTMLElement, nr: number, offset_ind: number) {
+        this._div = div;
+        this._div.style.left = (offset_ind * AreaGridRowGUI._rowOffset).toString() + "px";
+        document.querySelectorAll(AreaGridRowGUI.classFullPath + "._" + nr + ">" + AreaGridCellGUI._divClass).forEach(
+            (e) => this._cellGUIs.push(new AreaGridCellGUI(e as HTMLElement))
+        );
+    }
+}
+
+class ActionBarAreaGridGUI {
+    static readonly _divID: string = "FSActionBarAreaGrid";
+    private static _nrInstances: number = 0;
+
+    static get fullPath(): string {
+        return ActionBarGUI.fullPath + ">#" + this._divID;
+    }
+
+    private _div: HTMLElement;
+    private _rowGUIs: AreaGridRowGUI[] = [];
+    constructor() {
+        if(ActionBarAreaGridGUI._nrInstances > 0) {
+            throw "ActionBarAreaGridGUI already has an instance running!";
+        }
+        ActionBarAreaGridGUI._nrInstances += 1;
+        this._div = document.getElementById(ActionBarAreaGridGUI._divID);
+        document.querySelectorAll(AreaGridRowGUI.classFullPath).forEach(
+            (e, i, l) => {this._rowGUIs.push(new AreaGridRowGUI(e as HTMLElement, i, l.length - i - 1))}
+        )
+    }
+}
+
+class ActionBarGUI {
+    static readonly _divID: string = "FightScreenActionBar";
+    private static _nrInstances: number = 0;
+
+    static get fullPath(): string {
+        return FightScreenGUI.fullPath + ">#" + this._divID;
+    }
+
+
+    private _div: HTMLElement;
+    private _areaGridGUI: ActionBarAreaGridGUI;
+    constructor() {
+        if(ActionBarGUI._nrInstances > 0) {
+            throw "InfoBarGUI already has an instance running!";
+        }
+        ActionBarGUI._nrInstances += 1;
+        this._areaGridGUI = new ActionBarAreaGridGUI();
+        this._div = document.getElementById(ActionBarGUI._divID);
+    }
+}
+
+class InfoBarStatusBarsGUI {
+    
+    static readonly _divID: string = "FSInfoBarStatusBars";
+    private static _nrInstances: number = 0;
+
+    private _div: HTMLElement;
+    constructor() {
+        if(InfoBarStatusBarsGUI._nrInstances > 0) {
+            throw "InfoBarStatusBarsGUI already has an instance running!";
+        }
+        InfoBarStatusBarsGUI._nrInstances += 1;
+        this._div = document.getElementById(InfoBarStatusBarsGUI._divID);
+    }
+    resetFightRound() {
+    
+    }
+}
+
+class EnemyGridGUI {
+    static readonly _divClass: string = ".enemy_cell";
+
+    private static _divDisplay: string = null;
+
+    private _div: HTMLElement;
+    constructor(div: HTMLElement) {
+        this._div = div;
+        if(EnemyGridGUI._divDisplay == null) {
+            EnemyGridGUI._divDisplay = this._div.style.display;
+        }
+    }
+    show() {
+        this._div.style.display = EnemyGridGUI._divDisplay;
+    }
+    hide() {
+        this._div.style.display = 'none';
+    }
+}
+
+class TimerGridStopPlanningGUI {
+    static readonly _divClass: string = ".end_planning";
+    static get classFullPath(): string {
+        return EnemyGridTimerGridGUI.fullPath + ">" + this._divClass;
+    }
+    private _div: HTMLElement;
+    constructor(div: HTMLElement) {
+        this._div = div;
+        this.setUpEventListeners();
+    }
+    setUpEventListeners() {
+        let c_obj: TimerGridStopPlanningGUI = this;
+        c_obj._div.addEventListener('mousedown', (e: MouseEvent) => this.onMouseDown(e, c_obj));
+    }
+    onMouseDown(e: MouseEvent, c_obj: TimerGridStopPlanningGUI) {
+        FightScreenGUI.resetFightRound();
+    }
+}
+
+class TimerGridTimerGUI {
+    static readonly _divClass: string = ".timer";
+
+    private _timer: number;
+    private _timerIntervalID: number = null;
+    static get fullPath(): string {
+        return EnemyGridTimerGridGUI.fullPath + ">" + this._divClass;
+    }
+
+    private _div: HTMLElement;
+    constructor() {
+        this._div = document.querySelector(TimerGridTimerGUI.fullPath) as HTMLElement;
+    }
+    setTime(sep: string = ":") {
+        let time: number = this._timer;
+        let msec: string = (time % 1000).toString();
+        msec = StringUtil.padRightUntilLength(msec, 3, '0');
+        time = Math.floor(time / 1000)
+        let sec: string = (time % 60).toString();
+        sec = StringUtil.padRightUntilLength(sec, 2, '0');
+        time = Math.floor(time / 60);
+        let min: string = (time % 60).toString();
+        min = StringUtil.padRightUntilLength(min, 2, '0');
+        this._div.innerHTML = min + sep + sec + sep + msec;
+    }
+    resetTimer(time: number): void {
+        this._timer = time;
+    }
+    stopTimer(): void {
+        if(this._timerIntervalID != null) {
+            clearInterval(this._timerIntervalID);
+            this._timerIntervalID = null;
+        }
+    }
+    startTimer(): void {
+        if(this._timerIntervalID == null) {
+            this._timerIntervalID = setInterval(() => {this._timer -= 33; this.setTime()}, 33);
+        }
+    }
+}
+
+class EnemyGridTimerGridGUI {
+    static readonly _divClass: string = ".plan_countdown";
+    static get fullPath(): string {
+        return InfoBarEnemyGridGUI.fullPath + ">" + this._divClass;
+    }
+
+    private _div: HTMLElement;
+    private _stopPlanningGUIs: TimerGridStopPlanningGUI[] = [];
+    private _timerGUI: TimerGridTimerGUI;
+    private _maxTime: number = 30 * 1000;
+    constructor() {
+        this._div = document.querySelector(EnemyGridTimerGridGUI.fullPath) as HTMLElement;
+        document.querySelectorAll(TimerGridStopPlanningGUI.classFullPath).forEach(
+            (e) => this._stopPlanningGUIs.push(new TimerGridStopPlanningGUI(e as HTMLElement))
+        );
+        this._timerGUI = new TimerGridTimerGUI();
+        this.setUp();
+    }
+    setUp() {
+        this.reset();
+        this._timerGUI.startTimer();
+        this.update();
+
+    }
+    reset() {
+        this._timerGUI.resetTimer(this._maxTime);
+    }
+    resetFightRound() {
+        this._maxTime -= 500;
+        this._timerGUI.resetTimer(this._maxTime);
+    }
+    update() {
+
+    }
+}
+
+class InfoBarEnemyGridGUI {
+    
+    static readonly _divID: string = "FSInfoBarEnemyGrid";
+    private static _nrInstances: number = 0;
+    private static readonly _nrEnemyGridGUIs = 1;
+
+    static get fullPath(): string {
+        return InfoBarGUI.fullPath + ">#" + InfoBarEnemyGridGUI._divID;
+    }
+
+    private _div: HTMLElement;
+    private _enemyGrindGUIs: EnemyGridGUI[] = [];
+    private _timerGridGUI: EnemyGridTimerGridGUI;
+    constructor() {
+        if(InfoBarEnemyGridGUI._nrInstances > 0) {
+            throw "InfoBarEnemyGridGUI already has an instance running!";
+        }
+        InfoBarEnemyGridGUI._nrInstances += 1;
+        this._div = document.getElementById(InfoBarEnemyGridGUI._divID);
+        document.querySelectorAll(InfoBarEnemyGridGUI.fullPath + ">" + EnemyGridGUI._divClass).forEach(
+            (e) => this._enemyGrindGUIs.push(new EnemyGridGUI(e as HTMLElement))
+        );
+        this._timerGridGUI = new EnemyGridTimerGridGUI();
+        this.update();
+    }
+    update() {
+        this._enemyGrindGUIs.forEach((e, i) => {i < InfoBarEnemyGridGUI._nrEnemyGridGUIs ? e.show() : e.hide()});
+    }
+    resetTimer() {
+        this._timerGridGUI.reset();
+    }
+    resetFightRound() {
+        this._timerGridGUI.resetFightRound();
+    }
+}
+
+class InfoBarPlayerInfoGUI {
+    
+    static readonly _divID: string = "FSInfOBarPlayerInfo";
+    private static _nrInstances: number = 0;
+
+    private _div: HTMLElement;
+    constructor() {
+        if(InfoBarPlayerInfoGUI._nrInstances > 0) {
+            throw "InfoBarPlayerInfoGUI already has an instance running!";
+        }
+        InfoBarPlayerInfoGUI._nrInstances += 1;
+        this._div = document.getElementById(InfoBarPlayerInfoGUI._divID);
+    }
+    resetFightRound() {
+        
+    }
+}
+
+class InfoBarGUI {
+    static readonly _divID: string = "FightScreenInfoBar";
+    private static _nrInstances: number = 0;
+
+    static get fullPath() {
+        return FightScreenGUI.fullPath + ">#" + InfoBarGUI._divID;
+    }
+
+    private _div: HTMLElement;
+    private _statusBarsGUI: InfoBarStatusBarsGUI;
+    private _enemyGridGUI: InfoBarEnemyGridGUI;
+    private _playerInfoGUI: InfoBarPlayerInfoGUI;
+    constructor() {
+        if(InfoBarGUI._nrInstances > 0) {
+            throw "InfoBarGUI already has an instance running!";
+        }
+        InfoBarGUI._nrInstances += 1;
+        this._div = document.getElementById(InfoBarGUI._divID);
+        this._statusBarsGUI = new InfoBarStatusBarsGUI();
+        this._enemyGridGUI = new InfoBarEnemyGridGUI();
+        this._playerInfoGUI = new InfoBarPlayerInfoGUI();
+    }
+    resetFightRound(): void {
+        this._statusBarsGUI.resetFightRound();
+        this._enemyGridGUI.resetFightRound();
+        this._playerInfoGUI.resetFightRound();
+    }
+}
+
 
 class FightScreenGUI {
     static readonly _divID: string = "FightScreen";
@@ -529,7 +869,11 @@ class FightScreenGUI {
     private static _dragObj: DraggableGUI = null;
     private static _dragOffsetX: number;
     private static _dragOffsetY: number;
+    private static _self: FightScreenGUI;
 
+    static get fullPath(): string {
+        return "#" + FightScreenGUI._divID;
+    }
     static get dragging(): boolean {
         return this._dragging;
     }
@@ -583,11 +927,20 @@ class FightScreenGUI {
         }
     }
 
+    static resetFightRound(): void {
+        this._self.resetFightRound();
+    }
 
     private _div: HTMLElement;
-
+    private _infoBarGUI: InfoBarGUI;
+    private _actionBarGUI: ActionBarGUI;
+    private _actoinPlanBarGUI: ActionPlanBarGUI;
     constructor() {
+        FightScreenGUI._self = this;
         this._div = document.getElementById(FightScreenGUI._divID);
+        this._infoBarGUI = new InfoBarGUI();
+        this._actionBarGUI = new ActionBarGUI();
+        this._actoinPlanBarGUI = new ActionPlanBarGUI();
         this.setUpEventListeners();
     }
     setUpEventListeners(): void {
@@ -599,8 +952,10 @@ class FightScreenGUI {
             FightScreenGUI._dragObj.moveWithMouse(e);
         }
     }
+    private resetFightRound(): void {
+        this._infoBarGUI.resetFightRound();
+        this._actoinPlanBarGUI.resetFightRound();
+    }
 }
-
-let fSAPBGUI: FightScreenActionPlanBarGUI = new FightScreenActionPlanBarGUI();
 
 let FSGUI: FightScreenGUI = new FightScreenGUI();
