@@ -1,19 +1,4 @@
 /*                                      Util Namespaces */
-var __extends = (this && this.__extends) || (function () {
-    var extendStatics = function (d, b) {
-        extendStatics = Object.setPrototypeOf ||
-            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
-        return extendStatics(d, b);
-    };
-    return function (d, b) {
-        if (typeof b !== "function" && b !== null)
-            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
-        extendStatics(d, b);
-        function __() { this.constructor = d; }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-    };
-})();
 var MathUtil;
 (function (MathUtil) {
     function getRandomIntBelow(max) {
@@ -40,1019 +25,1093 @@ var ManaTypes;
     ManaTypes[ManaTypes["water"] = 3] = "water";
     ManaTypes[ManaTypes["wind"] = 4] = "wind";
 })(ManaTypes || (ManaTypes = {}));
-var Card = /** @class */ (function () {
-    function Card(suit, value, mana) {
-        if (mana === void 0) { mana = ManaTypes.neutral; }
+class Card {
+    static load(s) {
+        let i = 0;
+        let sep = getComputedStyle(document.body).getPropertyValue("--DEF-save-level0-sep");
+        let s_a = s.split(sep);
+        let suit = s_a[i];
+        i++;
+        let value = s_a[i];
+        i++;
+        let manaType = ManaTypes[s_a[i]];
+        i++;
+        return new Card(suit, value, manaType);
+    }
+    constructor(suit, value, mana = ManaTypes.neutral) {
         this._suit = suit;
         this._manaType = mana;
         this._value = value;
     }
-    Card.load = function (s) {
-        var i = 0;
-        var sep = getComputedStyle(document.body).getPropertyValue("--DEF-save-level0-sep");
-        var s_a = s.split(sep);
-        var suit = s_a[i];
-        i++;
-        var value = s_a[i];
-        i++;
-        var manaType = ManaTypes[s_a[i]];
-        i++;
-        return new Card(suit, value, manaType);
-    };
-    Object.defineProperty(Card.prototype, "suit", {
-        get: function () {
-            return this._suit;
-        },
-        enumerable: false,
-        configurable: true
-    });
-    Object.defineProperty(Card.prototype, "value", {
-        get: function () {
-            return this._value;
-        },
-        enumerable: false,
-        configurable: true
-    });
-    Object.defineProperty(Card.prototype, "manaType", {
-        get: function () {
-            return this._manaType;
-        },
-        enumerable: false,
-        configurable: true
-    });
-    Object.defineProperty(Card.prototype, "copy", {
-        get: function () {
-            return new Card(this._suit, this._value, this._manaType);
-        },
-        enumerable: false,
-        configurable: true
-    });
-    Card.prototype.toString = function () {
-        return this._value + this._suit;
-    };
-    Card.prototype.save = function () {
-        var sep = getComputedStyle(document.body).getPropertyValue("--DEF-save-level0-sep");
+    get suit() {
+        return this._suit;
+    }
+    get value() {
+        return this._value;
+    }
+    get manaType() {
+        return this._manaType;
+    }
+    get copy() {
+        return new Card(this._suit, this._value, this._manaType);
+    }
+    get HTMLString() {
+        return this._value + "<br>" + this._suit;
+    }
+    save() {
+        let sep = getComputedStyle(document.body).getPropertyValue("--DEF-save-level0-sep");
         return this._suit + sep + this._value + sep + this._manaType;
-    };
-    Card.prototype.load = function (s) {
-        var i = 0;
-        var sep = getComputedStyle(document.body).getPropertyValue("--DEF-save-level0-sep");
-        var s_a = s.split(sep);
+    }
+    load(s) {
+        let i = 0;
+        let sep = getComputedStyle(document.body).getPropertyValue("--DEF-save-level0-sep");
+        let s_a = s.split(sep);
         this._suit = s_a[i];
         i++;
         this._value = s_a[i];
         i++;
         this._manaType = ManaTypes[s_a[i]];
         i++;
-    };
-    return Card;
-}());
-var Deck = /** @class */ (function () {
-    function Deck() {
+    }
+}
+class Deck {
+    constructor() {
         this._cards = [];
     }
-    Object.defineProperty(Deck.prototype, "cards", {
-        get: function () {
-            return this._cards;
-        },
-        enumerable: false,
-        configurable: true
-    });
-    Deck.prototype.reset = function () {
+    get cards() {
+        return this._cards;
+    }
+    reset() {
         this._cards = [];
-    };
-    Deck.prototype.afterDeckRepopulation = function () {
+    }
+    afterDeckRepopulation() {
         this._nextCard = MathUtil.getRandomIntBelow(this._cards.length);
-    };
-    Deck.prototype.setNextCard = function () {
+    }
+    setNextCard() {
         /* Set up next card for the drawing with removing the prev. drawn and setting new _nextCard */
         this._cards[this._nextCard] = this._cards[this._cards.length - 1];
         this._cards.pop();
         this._nextCard = MathUtil.getRandomIntBelow(this._cards.length);
-    };
-    Deck.prototype.pushAll = function (cList) {
-        var _this = this;
-        cList.forEach(function (element) {
-            _this._cards.push(element.copy);
+    }
+    pushAll(cList) {
+        cList.forEach(element => {
+            this._cards.push(element.copy);
         });
-    };
-    Deck.prototype.setContent = function (oDeck) {
-        var _this = this;
+    }
+    setContent(oDeck) {
         this.reset();
-        oDeck.cards.forEach(function (element) {
-            _this._cards.push(element.copy);
+        oDeck.cards.forEach(element => {
+            this._cards.push(element.copy);
         });
         this.afterDeckRepopulation();
-    };
-    Deck.prototype.setContentSuitsValuesMana = function (suits, values, manaType) {
-        var _this = this;
-        if (manaType === void 0) { manaType = ManaTypes.neutral; }
+    }
+    setContentSuitsValuesMana(suits, values, manaType = ManaTypes.neutral) {
         this.reset();
-        suits.forEach(function (s) {
-            values.forEach(function (v) {
-                _this._cards.push(new Card(s, v, manaType));
+        suits.forEach(s => {
+            values.forEach(v => {
+                this._cards.push(new Card(s, v, manaType));
             });
         });
         this.afterDeckRepopulation();
-    };
-    Deck.prototype.peek = function () {
+    }
+    peek() {
         return this._cards[this._nextCard];
-    };
-    Deck.prototype.draw = function () {
+    }
+    draw() {
         //Get and remove a card randomly from the deck
-        var next = this.cards[this._nextCard];
+        let next = this.cards[this._nextCard];
         this.setNextCard();
         return next;
-    };
-    Deck.prototype.toString = function () {
-        return this.cards.map(function (c) { return c.toString(); }).reduce(function (a, s) { return a += s + "|"; }, "").slice(0, -1);
-    };
-    Object.defineProperty(Deck.prototype, "copy", {
-        get: function () {
-            var d = new Deck();
-            d.pushAll(this._cards.map(function (c) { return c.copy; }).reduce(function (a, c) { a.push(c); return a; }, new Array()));
-            return d;
-        },
-        enumerable: false,
-        configurable: true
-    });
-    Deck.suits = ['♣', '♦', '♥', '♠'];
-    Deck.values = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'A', 'J', 'Q', 'K'];
-    return Deck;
-}());
-var Hand = /** @class */ (function () {
-    function Hand(cards) {
-        if (cards === void 0) { cards = []; }
+    }
+    toString() {
+        return this.cards.map(c => c.toString()).reduce((a, s) => a += s + "|", "").slice(0, -1);
+    }
+    get copy() {
+        let d = new Deck();
+        d.pushAll(this._cards.map(c => c.copy).reduce((a, c) => { a.push(c); return a; }, new Array()));
+        return d;
+    }
+}
+Deck.suits = ['♣', '♦', '♥', '♠'];
+Deck.values = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'A', 'J', 'Q', 'K'];
+class Hand {
+    constructor(cards = []) {
         this._cards = cards;
     }
-    Object.defineProperty(Hand.prototype, "cards", {
-        get: function () {
-            //get current cards
-            return this._cards;
-        },
-        enumerable: false,
-        configurable: true
-    });
-    Object.defineProperty(Hand.prototype, "value", {
-        get: function () {
-            //return the numeric value of the hand
-            var value;
-            value = this._cards.map(function (c) { return c.value == 'A' ? 11 : (c.value == 'J' || c.value == 'Q' || c.value == 'K' ? 10 : Number(c.value)); }).reduce(function (a, n) { return a + n; }, 0);
-            var nr_aces = this._cards.map(function (c) { return c.value == 'A' ? 1 : 0; }).reduce(function (a, n) { return a + n; }, 0);
-            while (value > 21 && nr_aces > 0) {
-                nr_aces -= 1;
-                value -= 10;
-            }
-            return value;
-        },
-        enumerable: false,
-        configurable: true
-    });
-    Object.defineProperty(Hand.prototype, "length", {
-        get: function () {
-            return this._cards.length;
-        },
-        enumerable: false,
-        configurable: true
-    });
-    Object.defineProperty(Hand.prototype, "busted", {
-        get: function () {
-            return this.value > 21;
-        },
-        enumerable: false,
-        configurable: true
-    });
-    Object.defineProperty(Hand.prototype, "final", {
-        get: function () {
-            return this.value >= 21;
-        },
-        enumerable: false,
-        configurable: true
-    });
-    Hand.prototype.get = function (i) {
+    get cards() {
+        //get current cards
+        return this._cards;
+    }
+    get value() {
+        //return the numeric value of the hand
+        let value;
+        value = this._cards.map(c => c.value == 'A' ? 11 : (c.value == 'J' || c.value == 'Q' || c.value == 'K' ? 10 : Number(c.value))).reduce((a, n) => a + n, 0);
+        let nr_aces = this._cards.map(c => c.value == 'A' ? 1 : 0).reduce((a, n) => a + n, 0);
+        while (value > 21 && nr_aces > 0) {
+            nr_aces -= 1;
+            value -= 10;
+        }
+        return value;
+    }
+    get length() {
+        return this._cards.length;
+    }
+    get busted() {
+        return this.value > 21;
+    }
+    get final() {
+        return this.value >= 21;
+    }
+    get(i) {
         if (i >= this._cards.length) {
             return null;
         }
         return this._cards[i];
-    };
-    Hand.prototype.addCard = function (card) {
+    }
+    addCard(card) {
         //add a new card to the hand; card not copied
         this._cards.push(card);
-    };
-    Hand.prototype.popCard = function () {
+    }
+    popCard() {
         this._cards.pop();
-    };
-    Hand.prototype.reset = function () {
+    }
+    reset() {
         this._cards = [];
-    };
-    return Hand;
-}());
-/*                                      GUI                                                 */
-var CardGUI = /** @class */ (function () {
-    function CardGUI(div, card) {
-        if (card === void 0) { card = null; }
-        this._card = card;
-        this._div = div;
     }
-    Object.defineProperty(CardGUI.prototype, "card", {
-        get: function () {
-            return this._card;
-        },
-        set: function (card) {
-            this._card = card;
-            this.update();
-        },
-        enumerable: false,
-        configurable: true
-    });
-    CardGUI.prototype.update = function () {
-        if (this.card == null) {
-            this._div.style.display = 'none';
-        }
-        else {
-            this._div.style.display = 'block';
-            this._div.innerHTML = this.card.value + "<br>" + this.card.suit;
-        }
-    };
-    CardGUI.prototype.reset = function () {
-        this._div.textContent = "";
-        this._div.hidden = true;
-        this._card = null;
-    };
-    CardGUI.prototype.setAsTemp = function () {
-        this._div.style.opacity = "0.5";
-    };
-    CardGUI.prototype.setAsPerm = function () {
-        this._div.style.opacity = "1";
-    };
-    CardGUI.prototype.setLeft = function (left) {
-        //set the left property of style of the div to allow for stylizing the card display format
-        this._div.style.left = left.toString() + "px";
-    };
-    CardGUI._divClass = ".card";
-    return CardGUI;
-}());
-var HandGUI = /** @class */ (function () {
-    function HandGUI(super_path) {
-        var _this = this;
-        this._cardGUIs = [];
-        var path = super_path + ">" + HandGUI._divClass;
-        this._div = document.querySelector(path);
-        document.querySelectorAll(path + ">" + CardGUI._divClass).forEach(function (e) { return _this._cardGUIs.push(new CardGUI(e)); });
-        this._hand = new Hand();
-        this.stylizeDeck();
-    }
-    Object.defineProperty(HandGUI.prototype, "value", {
-        get: function () {
-            return this._hand.value;
-        },
-        enumerable: false,
-        configurable: true
-    });
-    Object.defineProperty(HandGUI.prototype, "busted", {
-        get: function () {
-            return this._hand.busted;
-        },
-        enumerable: false,
-        configurable: true
-    });
-    Object.defineProperty(HandGUI.prototype, "final", {
-        get: function () {
-            return this.busted || this._hand.final;
-        },
-        enumerable: false,
-        configurable: true
-    });
-    HandGUI.prototype.update = function () {
-        var _this = this;
-        this._cardGUIs.forEach(function (e, i) { return e.card = _this._hand.get(i); });
-    };
-    HandGUI.prototype.addCard = function (card) {
-        this._cardGUIs[this._hand.length].card = card;
-    };
-    HandGUI.prototype.addTempCard = function (card) {
-        //visual and deck changes
-        this._cardGUIs[this._hand.length].card = card;
-        this._cardGUIs[this._hand.length].setAsTemp();
-        this._hand.addCard(card);
-    };
-    HandGUI.prototype.finalizeTempCard = function () {
-        //visual changes only
-        this._cardGUIs[this._hand.length - 1].setAsPerm();
-    };
-    HandGUI.prototype.removeTempCard = function () {
-        this._cardGUIs[this._hand.length - 1].card = null;
-        this._hand.popCard();
-    };
-    HandGUI.prototype.stylizeDeck = function () {
-        this._cardGUIs.forEach(function (e, i) {
-            e.setLeft(i * 20.96);
-        });
-    };
-    HandGUI.prototype.resetFightRound = function () {
-        this._hand.reset();
-        this.update();
-    };
-    HandGUI._divClass = ".card_holder";
-    return HandGUI;
-}());
-var ActionGUI = /** @class */ (function () {
-    function ActionGUI(nr) {
-        this._entered = false;
-        this._handGUI = new HandGUI(ActionGUI._divClass + "._" + nr);
-        this._div = document.querySelector(ActionGUI._divClass + "._" + nr);
-        this.setUpEventListeners();
-        this.update();
-    }
-    Object.defineProperty(ActionGUI.prototype, "busted", {
-        get: function () {
-            return this._handGUI.busted;
-        },
-        enumerable: false,
-        configurable: true
-    });
-    Object.defineProperty(ActionGUI.prototype, "final", {
-        get: function () {
-            return this.busted || this._handGUI.final;
-        },
-        enumerable: false,
-        configurable: true
-    });
-    ActionGUI.prototype.setUpEventListeners = function () {
-        var c_obj = this;
-        c_obj._div.addEventListener('mouseenter', function (e) { return c_obj.onMouseEnter(e, c_obj); });
-        c_obj._div.addEventListener('mouseleave', function (e) { return c_obj.onMouseLeave(e, c_obj); });
-        c_obj._div.addEventListener('mouseup', function (e) { return c_obj.onMouseUp(e, c_obj); });
-    };
-    ActionGUI.prototype.onMouseEnter = function (e, c_obj) {
-        if (FightScreenGUI.dragObjectType == DragCardGUI._dragObjType && !c_obj._handGUI.busted) {
-            c_obj._handGUI.addTempCard(Card.load(FightScreenGUI.dragObjectData));
-            c_obj.update();
-            c_obj._entered = true;
-            FightScreenGUI.enterDragDestinationArea();
-        }
-    };
-    ActionGUI.prototype.onMouseLeave = function (e, c_obj) {
-        if (FightScreenGUI.dragObjectType == DragCardGUI._dragObjType && c_obj._entered) {
-            c_obj._handGUI.removeTempCard();
-            c_obj.update();
-            c_obj._entered = false;
-            FightScreenGUI.exitDragDestinationArea();
-        }
-    };
-    ActionGUI.prototype.onMouseUp = function (e, c_obj) {
-        if (FightScreenGUI.dragObjectType == DragCardGUI._dragObjType) {
-            c_obj._handGUI.finalizeTempCard();
-            ActionHolderGUI.setFinalAll();
-            c_obj._entered = false;
-            FightScreenGUI.endDrag();
-            DeckGUI.resetDragCard();
-        }
-    };
-    ActionGUI.prototype.update = function () {
-        this._handGUI.update();
-        var value = this._handGUI.value;
-        if (value < 14) {
-            this._div.style.border = 'dashed red 5px';
-        }
-        else if (value < 21) {
-            this._div.style.border = 'dashed green 5px';
-        }
-        else if (value == 21) {
-            this._div.style.border = 'solid green 5px';
-        }
-        else {
-            this._div.style.border = 'solid red 5px';
-        }
-    };
-    ActionGUI.prototype.show = function () {
-        this._div.style.display = "flex";
-    };
-    ActionGUI.prototype.hide = function () {
-        this._div.style.display = "none";
-    };
-    ActionGUI.prototype.addCard = function (card) {
-        this._handGUI.addCard(card);
-    };
-    ActionGUI.prototype.resetFightRound = function () {
-        this._handGUI.resetFightRound();
-        this.update();
-    };
-    ActionGUI._divClass = ".action_card_space";
-    return ActionGUI;
-}());
-var Player = /** @class */ (function () {
-    function Player() {
+}
+class Player {
+    constructor() {
         this._nrActions = 2;
         this._nrDecks = 1;
     }
-    Object.defineProperty(Player.prototype, "nrActions", {
-        get: function () {
-            return this._nrActions;
-        },
-        set: function (nr) {
-            this._nrActions = nr;
-        },
-        enumerable: false,
-        configurable: true
-    });
-    return Player;
-}());
-//who implement this need to have the static field
-var DraggableGUI = /** @class */ (function () {
-    function DraggableGUI() {
+    get nrActions() {
+        return this._nrActions;
     }
-    DraggableGUI.prototype.moveWithMouse = function (e) { };
-    Object.defineProperty(DraggableGUI.prototype, "left", {
-        get: function () { return ""; },
-        enumerable: false,
-        configurable: true
-    });
-    Object.defineProperty(DraggableGUI.prototype, "top", {
-        get: function () { return ""; },
-        enumerable: false,
-        configurable: true
-    });
-    return DraggableGUI;
-}());
-var DragCardGUI = /** @class */ (function (_super) {
-    __extends(DragCardGUI, _super);
-    function DragCardGUI(div, card) {
-        if (card === void 0) { card = null; }
-        var _this = _super.call(this) || this;
-        _this._card = card;
-        _this._div = div;
-        return _this;
+    set nrActions(nr) {
+        this._nrActions = nr;
     }
-    Object.defineProperty(DragCardGUI.prototype, "card", {
-        get: function () {
+}
+class Action {
+    static load(save) {
+        let a = new Action('');
+        a.load(save);
+        return a;
+    }
+    constructor(name) {
+        this._name = name;
+    }
+    get name() {
+        return this._name;
+    }
+    save() {
+        return this._name;
+    }
+    load(save) {
+        let i = 0;
+        let s_list = save.split("\\e\\");
+        this._name = s_list[i];
+        i++;
+    }
+}
+/*                                      GUI                                                 */
+class DraggableGUI {
+    moveWithMouse(e) { }
+    get left() { return ""; }
+    get top() { return ""; }
+}
+var ActionPlanBarGUIs;
+(function (ActionPlanBarGUIs) {
+    class CardGUI {
+        constructor(div, card = null) {
+            this._card = card;
+            this._div = div;
+        }
+        get card() {
             return this._card;
-        },
-        set: function (card) {
+        }
+        set card(card) {
+            this._card = card;
+            this.update();
+        }
+        update() {
+            if (this.card == null) {
+                this._div.style.display = 'none';
+            }
+            else {
+                this._div.style.display = 'block';
+                this._div.innerHTML = this.card.value + "<br>" + this.card.suit;
+            }
+        }
+        reset() {
+            this._div.textContent = "";
+            this._div.hidden = true;
+            this._card = null;
+        }
+        setAsTemp() {
+            this._div.style.opacity = "0.5";
+        }
+        setAsPerm() {
+            this._div.style.opacity = "1";
+        }
+        setLeft(left) {
+            //set the left property of style of the div to allow for stylizing the card display format
+            this._div.style.left = left.toString() + "px";
+        }
+    }
+    CardGUI._divClass = ".card";
+    class HandGUI {
+        constructor(super_path) {
+            this._cardGUIs = [];
+            let path = super_path + ">" + HandGUI._divClass;
+            this._div = document.querySelector(path);
+            document.querySelectorAll(path + ">" + CardGUI._divClass).forEach(e => this._cardGUIs.push(new CardGUI(e)));
+            this._hand = new Hand();
+            this.stylizeDeck();
+        }
+        get value() {
+            return this._hand.value;
+        }
+        get busted() {
+            return this._hand.busted;
+        }
+        get final() {
+            return this.busted || this._hand.final;
+        }
+        update() {
+            this._cardGUIs.forEach((e, i) => e.card = this._hand.get(i));
+        }
+        addCard(card) {
+            this._cardGUIs[this._hand.length].card = card;
+        }
+        addTempCard(card) {
+            //visual and deck changes
+            this._cardGUIs[this._hand.length].card = card;
+            this._cardGUIs[this._hand.length].setAsTemp();
+            this._hand.addCard(card);
+        }
+        finalizeTempCard() {
+            //visual changes only
+            this._cardGUIs[this._hand.length - 1].setAsPerm();
+        }
+        removeTempCard() {
+            this._cardGUIs[this._hand.length - 1].card = null;
+            this._hand.popCard();
+        }
+        stylizeDeck() {
+            this._cardGUIs.forEach((e, i) => {
+                e.setLeft(i * 20.96);
+            });
+        }
+        resetFightRound() {
+            this._hand.reset();
+            this.update();
+        }
+    }
+    HandGUI._divClass = ".card_holder";
+    class ActionGUI {
+        constructor(nr) {
+            this._entered = false;
+            this._handGUI = new HandGUI(ActionGUI._divClass + "._" + nr);
+            this._div = document.querySelector(ActionGUI._divClass + "._" + nr);
+            this.setUpEventListeners();
+            this.update();
+        }
+        get busted() {
+            return this._handGUI.busted;
+        }
+        get final() {
+            return this.busted || this._handGUI.final;
+        }
+        setUpEventListeners() {
+            let c_obj = this;
+            c_obj._div.addEventListener('mouseenter', (e) => c_obj.onMouseEnter(e, c_obj));
+            c_obj._div.addEventListener('mouseleave', (e) => c_obj.onMouseLeave(e, c_obj));
+            c_obj._div.addEventListener('mouseup', (e) => c_obj.onMouseUp(e, c_obj));
+        }
+        onMouseEnter(e, c_obj) {
+            if (DragAPI.dragObjectType == DragCardGUI._dragObjType && !c_obj._handGUI.busted) {
+                c_obj._handGUI.addTempCard(Card.load(DragAPI.dragObjectData));
+                c_obj.update();
+                c_obj._entered = true;
+                DragAPI.enterDragDestinationArea();
+            }
+        }
+        onMouseLeave(e, c_obj) {
+            if (DragAPI.dragObjectType == DragCardGUI._dragObjType && c_obj._entered) {
+                c_obj._handGUI.removeTempCard();
+                c_obj.update();
+                c_obj._entered = false;
+                DragAPI.exitDragDestinationArea();
+            }
+        }
+        onMouseUp(e, c_obj) {
+            if (DragAPI.dragObjectType == DragCardGUI._dragObjType) {
+                c_obj._handGUI.finalizeTempCard();
+                ActionHolderGUI.setFinalAll();
+                c_obj._entered = false;
+                DragAPI.endDrag();
+                DeckGUI.resetDragCard();
+            }
+        }
+        update() {
+            this._handGUI.update();
+            let value = this._handGUI.value;
+            if (value < 14) {
+                this._div.style.border = 'dashed red 5px';
+            }
+            else if (value < 21) {
+                this._div.style.border = 'dashed green 5px';
+            }
+            else if (value == 21) {
+                this._div.style.border = 'solid green 5px';
+            }
+            else {
+                this._div.style.border = 'solid red 5px';
+            }
+        }
+        show() {
+            this._div.style.display = "flex";
+        }
+        hide() {
+            this._div.style.display = "none";
+        }
+        addCard(card) {
+            this._handGUI.addCard(card);
+        }
+        resetFightRound() {
+            this._handGUI.resetFightRound();
+            this.update();
+        }
+    }
+    ActionGUI._divClass = ".action_card_space";
+    class DragCardGUI extends DraggableGUI {
+        constructor(div, card = null) {
+            super();
+            this._card = card;
+            this._div = div;
+        }
+        get card() {
+            return this._card;
+        }
+        set card(card) {
             this._card = card;
             this.initialUpdate();
-        },
-        enumerable: false,
-        configurable: true
-    });
-    Object.defineProperty(DragCardGUI.prototype, "left", {
-        get: function () {
+        }
+        get left() {
             return this._div.style.left;
-        },
-        enumerable: false,
-        configurable: true
-    });
-    Object.defineProperty(DragCardGUI.prototype, "top", {
-        get: function () {
+        }
+        get top() {
             return this._div.style.top;
-        },
-        enumerable: false,
-        configurable: true
-    });
-    DragCardGUI.prototype.initialUpdate = function () {
-        if (this.card == null) {
+        }
+        initialUpdate() {
+            if (this.card == null) {
+                this._div.style.display = 'none';
+            }
+            else {
+                this._div.style.display = 'block';
+                this._div.innerHTML = this.card.value + "<br>" + this.card.suit;
+            }
+        }
+        setPosition(x, y, adjust_y = true) {
+            let width = Number(getComputedStyle(this._div).getPropertyValue("--FSAPB-card-width").slice(0, -2));
+            let height = Number(getComputedStyle(this._div).getPropertyValue("--FSAPB-card-height").slice(0, -2));
+            this._div.style.left = (x).toString() + "px";
+            if (adjust_y) {
+                this._div.style.top = (y - height / 2).toString() + "px";
+            }
+            else {
+                this._div.style.top = (y).toString() + "px";
+            }
+        }
+        setOpacity(op) {
+            this._div.style.opacity = op.toString();
+        }
+        reset() {
+            this._div.textContent = "";
+            this.card = null;
+        }
+        moveWithMouse(e) {
+            this._div.style.left = (e.pageX - DragAPI.dragOffsetX).toString() + "px";
+            this._div.style.top = (e.pageY - DragAPI.dragOffsetY).toString() + "px";
+        }
+    }
+    DragCardGUI._divID = "#FSActionPlanBarDragCard";
+    DragCardGUI._dragObjType = 'card';
+    class DeckGUI {
+        static resetDragCard() {
+            DeckGUI._dragCardGUI.reset();
+        }
+        constructor(div) {
+            this._div = div;
+            this._deck = new Deck();
+            this.setUpEventListeners();
+        }
+        setContentSuitsValuesMana(suits, values, manaType = ManaTypes.neutral) {
+            this._deck.setContentSuitsValuesMana(suits, values, manaType);
+        }
+        setUpEventListeners() {
+            let c_obj = this;
+            this._div.addEventListener("mousedown", (e) => c_obj.onMouseDown(e, c_obj));
+        }
+        onMouseDown(e, c_obj) {
+            if (!ActionPlanBarGUI._finalAll && !DragAPI.dragging) {
+                let left = c_obj._div.getBoundingClientRect().left - 6;
+                let top = c_obj._div.getBoundingClientRect().top - 52;
+                let c = c_obj._deck.draw();
+                this.setUpDragObject(left, top, c);
+                DragAPI.startDrag(DragCardGUI._dragObjType, c.save(), e);
+            }
+        }
+        setUpDragObject(left, top, card) {
+            let styleSheet = getComputedStyle(this._div);
+            let styleNeeded = new Map();
+            DeckGUI._dragProperties.forEach((e) => { styleNeeded.set(e, styleSheet[e]); });
+            styleNeeded.set('left', left + "px");
+            styleNeeded.set('top', top + "px");
+            styleNeeded.set('display', 'block');
+            DragAPI.setUpDragObject(styleNeeded, this.createDragObjectInnerHTML(card));
+        }
+        createDragObjectInnerHTML(card) {
+            return card.HTMLString;
+        }
+        show() {
+            this._div.style.display = 'grid';
+        }
+        hide() {
             this._div.style.display = 'none';
         }
-        else {
-            this._div.style.display = 'block';
-            this._div.innerHTML = this.card.value + "<br>" + this.card.suit;
+        resetFightRound() {
+            this.setContentSuitsValuesMana(Deck.suits, Deck.values);
         }
-    };
-    DragCardGUI.prototype.setPosition = function (x, y, adjust_y) {
-        if (adjust_y === void 0) { adjust_y = true; }
-        var width = Number(getComputedStyle(this._div).getPropertyValue("--FSAPB-card-width").slice(0, -2));
-        var height = Number(getComputedStyle(this._div).getPropertyValue("--FSAPB-card-height").slice(0, -2));
+    }
+    DeckGUI._divClass = ".deck";
+    DeckGUI._dragProperties = ['width', 'height', 'border', 'backgroundColor'];
+    DeckGUI._dragCardGUI = new DragCardGUI(document.getElementById('FSActionPlanBarDragCard'));
+    class DeckHolderGUI {
+        constructor() {
+            this._currentDeckGUIs = 1;
+            this._deckGUIs = [];
+            //set up deck GUI's
+            document.querySelectorAll('#FightScreenActionPlanBar' + '>' + DeckHolderGUI._divClass + '>' + DeckGUI._divClass).forEach((e) => { this._deckGUIs.push(new DeckGUI(e)); });
+            this._deckGUIs[0].setContentSuitsValuesMana(Deck.suits, Deck.values);
+            this.update();
+        }
+        update() {
+            this._deckGUIs.forEach((e, i) => { i < this._currentDeckGUIs ? e.show() : e.hide(); });
+        }
+        resetFightRound() {
+            this._deckGUIs.forEach((e, i) => { i < this._currentDeckGUIs ? e.resetFightRound() : null; });
+        }
+    }
+    DeckHolderGUI._divClass = ".deck_holder";
+    class ActionHolderGUI {
+        constructor(superDivID) {
+            //set up deck GUI's
+            document.querySelectorAll(superDivID + '>' + ActionGUI._divClass).forEach((e, i) => { ActionHolderGUI._actionGUIs.push(new ActionGUI(i.toString())); });
+            this.update();
+        }
+        static setFinalAll() {
+            let foundNotFinal = false;
+            ActionHolderGUI._actionGUIs.forEach((e, i) => {
+                if (!e.final && i < ActionHolderGUI._currentActionGUIs) {
+                    ActionPlanBarGUI._finalAll = false;
+                    foundNotFinal = true;
+                    return;
+                }
+            });
+            if (!foundNotFinal) {
+                ActionPlanBarGUI._finalAll = true;
+            }
+        }
+        update() {
+            ActionHolderGUI._actionGUIs.forEach((e, i) => { i < ActionHolderGUI._currentActionGUIs ? e.show() : e.hide(); });
+        }
+        resetFightRound() {
+            ActionHolderGUI._actionGUIs.forEach((e, i) => {
+                if (i < ActionHolderGUI._currentActionGUIs) {
+                    e.resetFightRound();
+                }
+                ;
+            });
+            ActionHolderGUI.setFinalAll();
+        }
+    }
+    ActionHolderGUI._currentActionGUIs = 7;
+    ActionHolderGUI._actionGUIs = [];
+    class ActionPlanBarGUI {
+        constructor() {
+            this._deckHolderGUI = new DeckHolderGUI();
+            this._actionHolderGUI = new ActionHolderGUI(ActionPlanBarGUI._divID);
+        }
+        resetFightRound() {
+            this._deckHolderGUI.resetFightRound();
+            this._actionHolderGUI.resetFightRound();
+        }
+    }
+    ActionPlanBarGUI._divID = '#FightScreenActionPlanBar';
+    ActionPlanBarGUI._finalAll = false;
+    ActionPlanBarGUIs.ActionPlanBarGUI = ActionPlanBarGUI;
+})(ActionPlanBarGUIs || (ActionPlanBarGUIs = {}));
+var ActionBarGUIs;
+(function (ActionBarGUIs) {
+    class AreaGridCellGUI {
+        static get classFullPath() {
+            return AreaGridRowGUI.classFullPath + ">" + this._divClass;
+        }
+        constructor(div) {
+            this._div = div;
+            this.setUpEventListeners();
+        }
+        setUpEventListeners() {
+            let c_obj = this;
+            this._div.addEventListener('mouseenter', (e) => c_obj.onMouseEnter(e, c_obj));
+            this._div.addEventListener('mouseleave', (e) => c_obj.onMouseLeave(e, c_obj));
+        }
+        onMouseEnter(e, c_obj) {
+            c_obj._div.style.backgroundColor = 'rgb(0,0,255)';
+        }
+        onMouseLeave(e, c_obj) {
+            c_obj._div.style.backgroundColor = 'rgb(0,0,0)';
+        }
+    }
+    AreaGridCellGUI._divClass = ".cell";
+    class AreaGridRowGUI {
+        static get classFullPath() {
+            return ActionBarAreaGridGUI.fullPath + ">" + this._divClass;
+        }
+        constructor(div, nr, offsetInd) {
+            this._cellGUIs = [];
+            this._div = div;
+            this._div.style.left = (offsetInd * AreaGridRowGUI._rowOffset).toString() + "px";
+            document.querySelectorAll(AreaGridRowGUI.classFullPath + "._" + nr + ">" + AreaGridCellGUI._divClass).forEach((e) => this._cellGUIs.push(new AreaGridCellGUI(e)));
+        }
+    }
+    AreaGridRowGUI._divClass = ".row";
+    AreaGridRowGUI._rowOffset = 28;
+    class ActionBarAreaGridGUI {
+        static get fullPath() {
+            return ActionBarGUI.fullPath + ">#" + this._divID;
+        }
+        constructor() {
+            this._rowGUIs = [];
+            if (ActionBarAreaGridGUI._nrInstances > 0) {
+                throw "ActionBarAreaGridGUI already has an instance running!";
+            }
+            ActionBarAreaGridGUI._nrInstances += 1;
+            this._div = document.getElementById(ActionBarAreaGridGUI._divID);
+            document.querySelectorAll(AreaGridRowGUI.classFullPath).forEach((e, i, l) => { this._rowGUIs.push(new AreaGridRowGUI(e, i, l.length - i - 1)); });
+        }
+    }
+    ActionBarAreaGridGUI._divID = "FSActionBarAreaGrid";
+    ActionBarAreaGridGUI._nrInstances = 0;
+    class DragActionGUI {
+        get left() { return this._div.style.left; }
+        get top() { return this._div.style.top; }
+        constructor() {
+            this._action = null;
+            this._div = document.getElementById(DragActionGUI._divID);
+        }
+        set action(a) {
+            this._action = a;
+            if (a == null) {
+                this._div.style.display = 'none';
+            }
+            else {
+                this._div.style.display = 'flex';
+                this._div.innerHTML = a.name;
+            }
+        }
+        get action() {
+            return this._action;
+        }
+        setPosition(x, y, adjust_y = true) {
+            let width = Number(getComputedStyle(this._div).getPropertyValue("width").slice(0, -2));
+            let height = Number(getComputedStyle(this._div).getPropertyValue('height').slice(0, -2));
+            this._div.style.left = (x).toString() + "px";
+            if (adjust_y) {
+                this._div.style.top = (y - height).toString() + "px";
+            }
+            else {
+                this._div.style.top = (y).toString() + "px";
+            }
+        }
+        setOpacity(op) {
+            this._div.style.opacity = op.toString();
+        }
+        reset() {
+            this._div.textContent = "";
+            this.action = null;
+        }
+        moveWithMouse(e) {
+            this._div.style.left = (e.pageX - DragAPI.dragOffsetX).toString() + "px";
+            this._div.style.top = (e.pageY - DragAPI.dragOffsetY).toString() + "px";
+        }
+    }
+    DragActionGUI._dragObjType = "action";
+    DragActionGUI._divID = "FSActoinBarDragAction";
+    class ActionListElementGUI {
+        get action() {
+            return this._action;
+        }
+        set action(a) {
+            this._action = a;
+            this.display();
+        }
+        constructor(div) {
+            this._div = div;
+            this.setUpEventListeners();
+        }
+        setUpEventListeners() {
+            let c_obj = this;
+            this._div.addEventListener('mousedown', (e) => c_obj.onMouseDown(e, c_obj));
+        }
+        display() {
+            this._div.innerHTML = this.repr();
+        }
+        repr() {
+            return this._action != null ? this._action.name : "";
+        }
+        setHeight(height) {
+            this._div.style.height = (height - 2 * Number(getComputedStyle(this._div).borderWidth.slice(0, -2))) + "px";
+        }
+        onMouseDown(e, c_obj) {
+            if (!DragAPI.dragging && c_obj.action != null) {
+                let left = c_obj._div.getBoundingClientRect().left - 8;
+                let top = c_obj._div.getBoundingClientRect().top - 52;
+                c_obj.setUpDragObject(left, top);
+                DragAPI.startDrag(DragActionGUI._dragObjType, c_obj.action.save(), e);
+            }
+        }
+        setUpDragObject(left, top) {
+            let styleSheet = getComputedStyle(this._div);
+            let styleNeeded = new Map();
+            ActionListElementGUI._dragProperties.forEach((e) => { styleNeeded.set(e, styleSheet[e]); });
+            styleNeeded.set('left', left + "px");
+            styleNeeded.set('top', top + "px");
+            DragAPI.setUpDragObject(styleNeeded, this.createDragObjectInnerHTML());
+        }
+        createDragObjectInnerHTML() {
+            return this._action.name;
+        }
+    }
+    ActionListElementGUI._elementClass = ".action_list_element";
+    ActionListElementGUI._dragProperties = ['width', 'height', 'border', 'backgroundColor', 'display'];
+    ActionListElementGUI._dragActionGUI = new DragActionGUI();
+    class ActionListGUI {
+        constructor(div, elementsPerPage) {
+            this._listElements = [];
+            this._elements = [];
+            this._div = div;
+            this.elementsPerPage = elementsPerPage;
+            this._currentPage = 0;
+        }
+        set elementsPerPage(nr) {
+            if (nr != this._listElements.length) {
+                while (this._listElements.length < nr) {
+                    let newDiv = document.createElement('div');
+                    newDiv.classList.add(ActionListElementGUI._elementClass.slice(1));
+                    this._div.appendChild(newDiv);
+                    this._listElements.push(new ActionListElementGUI(newDiv));
+                }
+                while (this._listElements.length > nr) {
+                    this._listElements.pop();
+                }
+                let height = this._div.clientHeight / this._listElements.length;
+                this._listElements.forEach((e) => (e.setHeight(height)));
+                this.update();
+            }
+        }
+        get elementsPerPage() {
+            return this._listElements.length;
+        }
+        get currentPage() {
+            return this._currentPage;
+        }
+        get nrPages() {
+            return Math.ceil(this._elements.length / this.elementsPerPage);
+        }
+        nextPage() {
+            if (this.currentPage < this.nrPages) {
+                this._currentPage++;
+            }
+        }
+        getElementOnCurrentPage(i) {
+            let ind = this._currentPage * this._listElements.length + i;
+            if (i > this.elementsPerPage || ind >= this._elements.length) {
+                throw "ListGUI ERROR: Element requested not in list!";
+            }
+            return this._elements[ind];
+        }
+        addToEnd(elem) {
+            this._elements.push(elem);
+        }
+        update() {
+            let offsetInd = this._currentPage * this.elementsPerPage;
+            this._listElements.forEach((e, i) => {
+                i + offsetInd < this._elements.length ? e.action = this._elements[i + offsetInd] : e.action = null;
+            });
+        }
+    }
+    class ActionBarGUI {
+        static get fullPath() {
+            return FightScreenGUI.fullPath + ">#" + this._divID;
+        }
+        constructor() {
+            if (ActionBarGUI._nrInstances > 0) {
+                throw "InfoBarGUI already has an instance running!";
+            }
+            ActionBarGUI._nrInstances += 1;
+            this._div = document.getElementById(ActionBarGUI._divID);
+            this._spellActionList = new ActionListGUI(document.getElementById(ActionBarGUI._spellListID), ActionBarGUI._nrElementsPerList);
+            this._areaGridGUI = new ActionBarAreaGridGUI();
+            this._otherActionList = new ActionListGUI(document.getElementById(ActionBarGUI._otherListID), ActionBarGUI._nrElementsPerList);
+            this._otherActionList.addToEnd(new Action('A'));
+            this._otherActionList.addToEnd(new Action('B'));
+            this._otherActionList.addToEnd(new Action('C'));
+            this.update();
+        }
+        update() {
+            this._spellActionList.update();
+            this._otherActionList.update();
+        }
+    }
+    ActionBarGUI._divID = "FightScreenActionBar";
+    ActionBarGUI._nrElementsPerList = 10;
+    ActionBarGUI._spellListID = "FSActionBarSpellActions";
+    ActionBarGUI._otherListID = "FSActionBarOtherActions";
+    ActionBarGUI._nrInstances = 0;
+    ActionBarGUIs.ActionBarGUI = ActionBarGUI;
+})(ActionBarGUIs || (ActionBarGUIs = {}));
+var InfoBarGUIs;
+(function (InfoBarGUIs) {
+    class InfoBarStatusBarsGUI {
+        constructor() {
+            if (InfoBarStatusBarsGUI._nrInstances > 0) {
+                throw "InfoBarStatusBarsGUI already has an instance running!";
+            }
+            InfoBarStatusBarsGUI._nrInstances += 1;
+            this._div = document.getElementById(InfoBarStatusBarsGUI._divID);
+        }
+        resetFightRound() {
+        }
+    }
+    InfoBarStatusBarsGUI._divID = "FSInfoBarStatusBars";
+    InfoBarStatusBarsGUI._nrInstances = 0;
+    class EnemyGridGUI {
+        constructor(div) {
+            this._div = div;
+            if (EnemyGridGUI._divDisplay == null) {
+                EnemyGridGUI._divDisplay = this._div.style.display;
+            }
+        }
+        show() {
+            this._div.style.display = EnemyGridGUI._divDisplay;
+        }
+        hide() {
+            this._div.style.display = 'none';
+        }
+    }
+    EnemyGridGUI._divClass = ".enemy_cell";
+    EnemyGridGUI._divDisplay = null;
+    class TimerGridStopPlanningGUI {
+        static get classFullPath() {
+            return EnemyGridTimerGridGUI.fullPath + ">" + this._divClass;
+        }
+        constructor(div) {
+            this._div = div;
+            this.setUpEventListeners();
+        }
+        setUpEventListeners() {
+            let c_obj = this;
+            c_obj._div.addEventListener('mousedown', (e) => this.onMouseDown(e, c_obj));
+        }
+        onMouseDown(e, c_obj) {
+            FightScreenGUI.resetFightRound();
+        }
+    }
+    TimerGridStopPlanningGUI._divClass = ".end_planning";
+    class TimerGridTimerGUI {
+        static get fullPath() {
+            return EnemyGridTimerGridGUI.fullPath + ">" + this._divClass;
+        }
+        constructor() {
+            this._timerIntervalID = null;
+            this._div = document.querySelector(TimerGridTimerGUI.fullPath);
+        }
+        setTime(sep = ":") {
+            let time = this._timer;
+            let msec = (time % 1000).toString();
+            msec = StringUtil.padRightUntilLength(msec, 3, '0');
+            time = Math.floor(time / 1000);
+            let sec = (time % 60).toString();
+            sec = StringUtil.padRightUntilLength(sec, 2, '0');
+            time = Math.floor(time / 60);
+            let min = (time % 60).toString();
+            min = StringUtil.padRightUntilLength(min, 2, '0');
+            this._div.innerHTML = min + sep + sec + sep + msec;
+        }
+        resetTimer(time) {
+            this._timer = time;
+        }
+        stopTimer() {
+            if (this._timerIntervalID != null) {
+                clearInterval(this._timerIntervalID);
+                this._timerIntervalID = null;
+            }
+        }
+        startTimer() {
+            if (this._timerIntervalID == null) {
+                this._timerIntervalID = setInterval(() => { this._timer -= 33; this.setTime(); }, 33);
+            }
+        }
+    }
+    TimerGridTimerGUI._divClass = ".timer";
+    class EnemyGridTimerGridGUI {
+        static get fullPath() {
+            return InfoBarEnemyGridGUI.fullPath + ">" + this._divClass;
+        }
+        constructor() {
+            this._stopPlanningGUIs = [];
+            this._maxTime = 30 * 1000;
+            this._div = document.querySelector(EnemyGridTimerGridGUI.fullPath);
+            document.querySelectorAll(TimerGridStopPlanningGUI.classFullPath).forEach((e) => this._stopPlanningGUIs.push(new TimerGridStopPlanningGUI(e)));
+            this._timerGUI = new TimerGridTimerGUI();
+            this.setUp();
+        }
+        setUp() {
+            this.reset();
+            this._timerGUI.startTimer();
+            this.update();
+        }
+        reset() {
+            this._timerGUI.resetTimer(this._maxTime);
+        }
+        resetFightRound() {
+            this._maxTime -= 500;
+            this._timerGUI.resetTimer(this._maxTime);
+        }
+        update() {
+        }
+    }
+    EnemyGridTimerGridGUI._divClass = ".plan_countdown";
+    class InfoBarEnemyGridGUI {
+        static get fullPath() {
+            return InfoBarGUI.fullPath + ">#" + InfoBarEnemyGridGUI._divID;
+        }
+        constructor() {
+            this._enemyGrindGUIs = [];
+            if (InfoBarEnemyGridGUI._nrInstances > 0) {
+                throw "InfoBarEnemyGridGUI already has an instance running!";
+            }
+            InfoBarEnemyGridGUI._nrInstances += 1;
+            this._div = document.getElementById(InfoBarEnemyGridGUI._divID);
+            document.querySelectorAll(InfoBarEnemyGridGUI.fullPath + ">" + EnemyGridGUI._divClass).forEach((e) => this._enemyGrindGUIs.push(new EnemyGridGUI(e)));
+            this._timerGridGUI = new EnemyGridTimerGridGUI();
+            this.update();
+        }
+        update() {
+            this._enemyGrindGUIs.forEach((e, i) => { i < InfoBarEnemyGridGUI._nrEnemyGridGUIs ? e.show() : e.hide(); });
+        }
+        resetTimer() {
+            this._timerGridGUI.reset();
+        }
+        resetFightRound() {
+            this._timerGridGUI.resetFightRound();
+        }
+    }
+    InfoBarEnemyGridGUI._divID = "FSInfoBarEnemyGrid";
+    InfoBarEnemyGridGUI._nrInstances = 0;
+    InfoBarEnemyGridGUI._nrEnemyGridGUIs = 1;
+    class InfoBarPlayerInfoGUI {
+        constructor() {
+            if (InfoBarPlayerInfoGUI._nrInstances > 0) {
+                throw "InfoBarPlayerInfoGUI already has an instance running!";
+            }
+            InfoBarPlayerInfoGUI._nrInstances += 1;
+            this._div = document.getElementById(InfoBarPlayerInfoGUI._divID);
+        }
+        resetFightRound() {
+        }
+    }
+    InfoBarPlayerInfoGUI._divID = "FSInfOBarPlayerInfo";
+    InfoBarPlayerInfoGUI._nrInstances = 0;
+    class InfoBarGUI {
+        static get fullPath() {
+            return FightScreenGUI.fullPath + ">#" + InfoBarGUI._divID;
+        }
+        constructor() {
+            if (InfoBarGUI._nrInstances > 0) {
+                throw "InfoBarGUI already has an instance running!";
+            }
+            InfoBarGUI._nrInstances += 1;
+            this._div = document.getElementById(InfoBarGUI._divID);
+            this._statusBarsGUI = new InfoBarStatusBarsGUI();
+            this._enemyGridGUI = new InfoBarEnemyGridGUI();
+            this._playerInfoGUI = new InfoBarPlayerInfoGUI();
+        }
+        resetFightRound() {
+            this._statusBarsGUI.resetFightRound();
+            this._enemyGridGUI.resetFightRound();
+            this._playerInfoGUI.resetFightRound();
+        }
+    }
+    InfoBarGUI._divID = "FightScreenInfoBar";
+    InfoBarGUI._nrInstances = 0;
+    InfoBarGUIs.InfoBarGUI = InfoBarGUI;
+})(InfoBarGUIs || (InfoBarGUIs = {}));
+class DragObejctGUI {
+    get left() {
+        return this._div.style.left;
+    }
+    get top() {
+        return this._div.style.top;
+    }
+    constructor() {
+        this._div = document.getElementById(DragObejctGUI._divID);
+    }
+    setPosition(x, y, adjust_y = true) {
+        let width = Number(getComputedStyle(this._div).getPropertyValue("width").slice(0, -2));
+        let height = Number(getComputedStyle(this._div).getPropertyValue('height').slice(0, -2));
         this._div.style.left = (x).toString() + "px";
         if (adjust_y) {
-            this._div.style.top = (y - height / 2).toString() + "px";
+            this._div.style.top = (y - height).toString() + "px";
         }
         else {
             this._div.style.top = (y).toString() + "px";
         }
-    };
-    DragCardGUI.prototype.setOpacity = function (op) {
+    }
+    setInnerHTML(innerHTML) {
+        this._div.innerHTML = innerHTML;
+    }
+    setOpacity(op) {
         this._div.style.opacity = op.toString();
-    };
-    DragCardGUI.prototype.reset = function () {
-        this._div.textContent = "";
-        this.card = null;
-    };
-    DragCardGUI.prototype.moveWithMouse = function (e) {
-        this._div.style.left = (e.pageX - FightScreenGUI.dragOffsetX).toString() + "px";
-        this._div.style.top = (e.pageY - FightScreenGUI.dragOffsetY).toString() + "px";
-    };
-    DragCardGUI._divID = "#FSActionPlanBarDragCard";
-    DragCardGUI._dragObjType = 'card';
-    return DragCardGUI;
-}(DraggableGUI));
-var DeckGUI = /** @class */ (function () {
-    function DeckGUI(div) {
-        this._div = div;
-        this._deck = new Deck();
-        this.setUpEventListeners();
     }
-    DeckGUI.resetDragCard = function () {
-        DeckGUI._dragCardGUI.reset();
-    };
-    DeckGUI.prototype.setContentSuitsValuesMana = function (suits, values, manaType) {
-        if (manaType === void 0) { manaType = ManaTypes.neutral; }
-        this._deck.setContentSuitsValuesMana(suits, values, manaType);
-    };
-    DeckGUI.prototype.setUpEventListeners = function () {
-        var c_obj = this;
-        this._div.addEventListener("mousedown", function (e) { return c_obj.onMouseDown(e, c_obj); });
-    };
-    DeckGUI.prototype.onMouseDown = function (e, c_obj) {
-        if (!ActionPlanBarGUI._finalAll && !FightScreenGUI.dragging) {
-            var c = c_obj._deck.draw();
-            DeckGUI._dragCardGUI.card = c;
-            var left = c_obj._div.getBoundingClientRect().left - 12;
-            var top_1 = c_obj._div.getBoundingClientRect().top + 4;
-            DeckGUI._dragCardGUI.setPosition(left, top_1);
-            FightScreenGUI.startDrag(DragCardGUI._dragObjType, DeckGUI._dragCardGUI, DeckGUI._dragCardGUI.card.save(), e);
-        }
-    };
-    DeckGUI.prototype.show = function () {
-        this._div.style.display = 'grid';
-    };
-    DeckGUI.prototype.hide = function () {
-        this._div.style.display = 'none';
-    };
-    DeckGUI.prototype.resetFightRound = function () {
-        this.setContentSuitsValuesMana(Deck.suits, Deck.values);
-    };
-    DeckGUI._divClass = ".deck";
-    DeckGUI._dragCardGUI = new DragCardGUI(document.getElementById('FSActionPlanBarDragCard'));
-    return DeckGUI;
-}());
-var DeckHolderGUI = /** @class */ (function () {
-    function DeckHolderGUI() {
-        var _this = this;
-        this._currentDeckGUIs = 1;
-        this._deckGUIs = [];
-        //set up deck GUI's
-        document.querySelectorAll('#FightScreenActionPlanBar' + '>' + DeckHolderGUI._divClass + '>' + DeckGUI._divClass).forEach(function (e) { _this._deckGUIs.push(new DeckGUI(e)); });
-        this._deckGUIs[0].setContentSuitsValuesMana(Deck.suits, Deck.values);
-        this.update();
+    setStyle(style) {
+        this._style = style;
+        style.forEach((v, k) => { this._div.style[k] = v; });
     }
-    DeckHolderGUI.prototype.update = function () {
-        var _this = this;
-        this._deckGUIs.forEach(function (e, i) { i < _this._currentDeckGUIs ? e.show() : e.hide(); });
-    };
-    DeckHolderGUI.prototype.resetFightRound = function () {
-        var _this = this;
-        this._deckGUIs.forEach(function (e, i) { i < _this._currentDeckGUIs ? e.resetFightRound() : null; });
-    };
-    DeckHolderGUI._divClass = ".deck_holder";
-    return DeckHolderGUI;
-}());
-var ActionHolderGUI = /** @class */ (function () {
-    function ActionHolderGUI(superDivID) {
-        //set up deck GUI's
-        document.querySelectorAll(superDivID + '>' + ActionGUI._divClass).forEach(function (e, i) { ActionHolderGUI._actionGUIs.push(new ActionGUI(i.toString())); });
-        this.update();
+    reset() {
+        //clear class list
+        this._div.classList.forEach((k) => this._div.classList.remove(k));
+        //clear style
+        this._style.forEach((v, k) => this._div.style[k] = "");
+        //clear innerHTML
+        this._div.innerHTML = "";
+        //hide
+        this._div.style.display = "none";
     }
-    ActionHolderGUI.setFinalAll = function () {
-        var foundNotFinal = false;
-        ActionHolderGUI._actionGUIs.forEach(function (e, i) {
-            if (!e.final && i < ActionHolderGUI._currentActionGUIs) {
-                ActionPlanBarGUI._finalAll = false;
-                foundNotFinal = true;
-                return;
-            }
-        });
-        if (!foundNotFinal) {
-            ActionPlanBarGUI._finalAll = true;
-        }
-    };
-    ActionHolderGUI.prototype.update = function () {
-        ActionHolderGUI._actionGUIs.forEach(function (e, i) { i < ActionHolderGUI._currentActionGUIs ? e.show() : e.hide(); });
-    };
-    ActionHolderGUI.prototype.resetFightRound = function () {
-        ActionHolderGUI._actionGUIs.forEach(function (e, i) {
-            if (i < ActionHolderGUI._currentActionGUIs) {
-                e.resetFightRound();
-            }
-            ;
-        });
-        ActionHolderGUI.setFinalAll();
-    };
-    ActionHolderGUI._currentActionGUIs = 7;
-    ActionHolderGUI._actionGUIs = [];
-    return ActionHolderGUI;
-}());
-var ActionPlanBarGUI = /** @class */ (function () {
-    function ActionPlanBarGUI() {
-        this._deckHolderGUI = new DeckHolderGUI();
-        this._actionHolderGUI = new ActionHolderGUI(ActionPlanBarGUI._divID);
+    moveWithMouse(e) {
+        this._div.style.left = (e.pageX - DragAPI.dragOffsetX).toString() + "px";
+        this._div.style.top = (e.pageY - DragAPI.dragOffsetY).toString() + "px";
     }
-    ActionPlanBarGUI.prototype.resetFightRound = function () {
-        this._deckHolderGUI.resetFightRound();
-        this._actionHolderGUI.resetFightRound();
-    };
-    ActionPlanBarGUI._divID = '#FightScreenActionPlanBar';
-    ActionPlanBarGUI._finalAll = false;
-    return ActionPlanBarGUI;
-}());
-var AreaGridCellGUI = /** @class */ (function () {
-    function AreaGridCellGUI(div) {
-        this._div = div;
+}
+DragObejctGUI._divID = "FightScreenDragObject";
+class DragAPI {
+    static get dragging() {
+        return this._dragging;
     }
-    Object.defineProperty(AreaGridCellGUI, "classFullPath", {
-        get: function () {
-            return AreaGridRowGUI.classFullPath + ">" + this._divClass;
-        },
-        enumerable: false,
-        configurable: true
-    });
-    AreaGridCellGUI._divClass = ".cell";
-    return AreaGridCellGUI;
-}());
-var AreaGridRowGUI = /** @class */ (function () {
-    function AreaGridRowGUI(div, nr, offset_ind) {
-        var _this = this;
-        this._cellGUIs = [];
-        this._div = div;
-        this._div.style.left = (offset_ind * AreaGridRowGUI._rowOffset).toString() + "px";
-        document.querySelectorAll(AreaGridRowGUI.classFullPath + "._" + nr + ">" + AreaGridCellGUI._divClass).forEach(function (e) { return _this._cellGUIs.push(new AreaGridCellGUI(e)); });
-        console.log(this._cellGUIs, AreaGridRowGUI.classFullPath + "._" + nr + AreaGridCellGUI._divClass);
+    static get dragObjectType() {
+        return this._dragObjType;
     }
-    Object.defineProperty(AreaGridRowGUI, "classFullPath", {
-        get: function () {
-            return ActionBarAreaGridGUI.fullPath + ">" + this._divClass;
-        },
-        enumerable: false,
-        configurable: true
-    });
-    AreaGridRowGUI._divClass = ".row";
-    AreaGridRowGUI._rowOffset = 28;
-    return AreaGridRowGUI;
-}());
-var ActionBarAreaGridGUI = /** @class */ (function () {
-    function ActionBarAreaGridGUI() {
-        var _this = this;
-        this._rowGUIs = [];
-        if (ActionBarAreaGridGUI._nrInstances > 0) {
-            throw "ActionBarAreaGridGUI already has an instance running!";
-        }
-        ActionBarAreaGridGUI._nrInstances += 1;
-        this._div = document.getElementById(ActionBarAreaGridGUI._divID);
-        console.log(AreaGridRowGUI.classFullPath);
-        document.querySelectorAll(AreaGridRowGUI.classFullPath).forEach(function (e, i, l) { _this._rowGUIs.push(new AreaGridRowGUI(e, i, l.length - i - 1)); });
+    static get dragObjectData() {
+        return this._dragging ? window.sessionStorage.getItem(this._dragObjType) : null;
     }
-    Object.defineProperty(ActionBarAreaGridGUI, "fullPath", {
-        get: function () {
-            return ActionBarGUI.fullPath + ">#" + this._divID;
-        },
-        enumerable: false,
-        configurable: true
-    });
-    ActionBarAreaGridGUI._divID = "FSActionBarAreaGrid";
-    ActionBarAreaGridGUI._nrInstances = 0;
-    return ActionBarAreaGridGUI;
-}());
-var ActionBarGUI = /** @class */ (function () {
-    function ActionBarGUI() {
-        if (ActionBarGUI._nrInstances > 0) {
-            throw "InfoBarGUI already has an instance running!";
-        }
-        ActionBarGUI._nrInstances += 1;
-        this._areaGridGUI = new ActionBarAreaGridGUI();
-        this._div = document.getElementById(ActionBarGUI._divID);
+    static get insideDragDestinationArea() {
+        return this._insideDragDestArea;
     }
-    Object.defineProperty(ActionBarGUI, "fullPath", {
-        get: function () {
-            return FightScreenGUI.fullPath + ">#" + this._divID;
-        },
-        enumerable: false,
-        configurable: true
-    });
-    ActionBarGUI._divID = "FightScreenActionBar";
-    ActionBarGUI._nrInstances = 0;
-    return ActionBarGUI;
-}());
-var InfoBarStatusBarsGUI = /** @class */ (function () {
-    function InfoBarStatusBarsGUI() {
-        if (InfoBarStatusBarsGUI._nrInstances > 0) {
-            throw "InfoBarStatusBarsGUI already has an instance running!";
-        }
-        InfoBarStatusBarsGUI._nrInstances += 1;
-        this._div = document.getElementById(InfoBarStatusBarsGUI._divID);
+    static get dragOffsetX() {
+        return this._dragging ? this._dragOffsetX : null;
     }
-    InfoBarStatusBarsGUI.prototype.resetFightRound = function () {
-    };
-    InfoBarStatusBarsGUI._divID = "FSInfoBarStatusBars";
-    InfoBarStatusBarsGUI._nrInstances = 0;
-    return InfoBarStatusBarsGUI;
-}());
-var EnemyGridGUI = /** @class */ (function () {
-    function EnemyGridGUI(div) {
-        this._div = div;
-        if (EnemyGridGUI._divDisplay == null) {
-            EnemyGridGUI._divDisplay = this._div.style.display;
+    static get dragOffsetY() {
+        return this._dragging ? this._dragOffsetY : null;
+    }
+    static setUpDragObject(style, innerHTML) {
+        if (!this._dragging) {
+            this._dragObj.setStyle(style);
+            this._dragObj.setInnerHTML(innerHTML);
         }
     }
-    EnemyGridGUI.prototype.show = function () {
-        this._div.style.display = EnemyGridGUI._divDisplay;
-    };
-    EnemyGridGUI.prototype.hide = function () {
-        this._div.style.display = 'none';
-    };
-    EnemyGridGUI._divClass = ".enemy_cell";
-    EnemyGridGUI._divDisplay = null;
-    return EnemyGridGUI;
-}());
-var TimerGridStopPlanningGUI = /** @class */ (function () {
-    function TimerGridStopPlanningGUI(div) {
-        this._div = div;
-        this.setUpEventListeners();
-    }
-    Object.defineProperty(TimerGridStopPlanningGUI, "classFullPath", {
-        get: function () {
-            return EnemyGridTimerGridGUI.fullPath + ">" + this._divClass;
-        },
-        enumerable: false,
-        configurable: true
-    });
-    TimerGridStopPlanningGUI.prototype.setUpEventListeners = function () {
-        var _this = this;
-        var c_obj = this;
-        c_obj._div.addEventListener('mousedown', function (e) { return _this.onMouseDown(e, c_obj); });
-    };
-    TimerGridStopPlanningGUI.prototype.onMouseDown = function (e, c_obj) {
-        FightScreenGUI.resetFightRound();
-    };
-    TimerGridStopPlanningGUI._divClass = ".end_planning";
-    return TimerGridStopPlanningGUI;
-}());
-var TimerGridTimerGUI = /** @class */ (function () {
-    function TimerGridTimerGUI() {
-        this._timerIntervalID = null;
-        this._div = document.querySelector(TimerGridTimerGUI.fullPath);
-    }
-    Object.defineProperty(TimerGridTimerGUI, "fullPath", {
-        get: function () {
-            return EnemyGridTimerGridGUI.fullPath + ">" + this._divClass;
-        },
-        enumerable: false,
-        configurable: true
-    });
-    TimerGridTimerGUI.prototype.setTime = function (sep) {
-        if (sep === void 0) { sep = ":"; }
-        var time = this._timer;
-        var msec = (time % 1000).toString();
-        msec = StringUtil.padRightUntilLength(msec, 3, '0');
-        time = Math.floor(time / 1000);
-        var sec = (time % 60).toString();
-        sec = StringUtil.padRightUntilLength(sec, 2, '0');
-        time = Math.floor(time / 60);
-        var min = (time % 60).toString();
-        min = StringUtil.padRightUntilLength(min, 2, '0');
-        this._div.innerHTML = min + sep + sec + sep + msec;
-    };
-    TimerGridTimerGUI.prototype.resetTimer = function (time) {
-        this._timer = time;
-    };
-    TimerGridTimerGUI.prototype.stopTimer = function () {
-        if (this._timerIntervalID != null) {
-            clearInterval(this._timerIntervalID);
-            this._timerIntervalID = null;
-        }
-    };
-    TimerGridTimerGUI.prototype.startTimer = function () {
-        var _this = this;
-        if (this._timerIntervalID == null) {
-            this._timerIntervalID = setInterval(function () { _this._timer -= 33; _this.setTime(); }, 33);
-        }
-    };
-    TimerGridTimerGUI._divClass = ".timer";
-    return TimerGridTimerGUI;
-}());
-var EnemyGridTimerGridGUI = /** @class */ (function () {
-    function EnemyGridTimerGridGUI() {
-        var _this = this;
-        this._stopPlanningGUIs = [];
-        this._maxTime = 30 * 1000;
-        this._div = document.querySelector(EnemyGridTimerGridGUI.fullPath);
-        document.querySelectorAll(TimerGridStopPlanningGUI.classFullPath).forEach(function (e) { return _this._stopPlanningGUIs.push(new TimerGridStopPlanningGUI(e)); });
-        this._timerGUI = new TimerGridTimerGUI();
-        this.setUp();
-    }
-    Object.defineProperty(EnemyGridTimerGridGUI, "fullPath", {
-        get: function () {
-            return InfoBarEnemyGridGUI.fullPath + ">" + this._divClass;
-        },
-        enumerable: false,
-        configurable: true
-    });
-    EnemyGridTimerGridGUI.prototype.setUp = function () {
-        this.reset();
-        this._timerGUI.startTimer();
-        this.update();
-    };
-    EnemyGridTimerGridGUI.prototype.reset = function () {
-        this._timerGUI.resetTimer(this._maxTime);
-    };
-    EnemyGridTimerGridGUI.prototype.resetFightRound = function () {
-        this._maxTime -= 500;
-        this._timerGUI.resetTimer(this._maxTime);
-    };
-    EnemyGridTimerGridGUI.prototype.update = function () {
-    };
-    EnemyGridTimerGridGUI._divClass = ".plan_countdown";
-    return EnemyGridTimerGridGUI;
-}());
-var InfoBarEnemyGridGUI = /** @class */ (function () {
-    function InfoBarEnemyGridGUI() {
-        var _this = this;
-        this._enemyGrindGUIs = [];
-        if (InfoBarEnemyGridGUI._nrInstances > 0) {
-            throw "InfoBarEnemyGridGUI already has an instance running!";
-        }
-        InfoBarEnemyGridGUI._nrInstances += 1;
-        this._div = document.getElementById(InfoBarEnemyGridGUI._divID);
-        document.querySelectorAll(InfoBarEnemyGridGUI.fullPath + ">" + EnemyGridGUI._divClass).forEach(function (e) { return _this._enemyGrindGUIs.push(new EnemyGridGUI(e)); });
-        this._timerGridGUI = new EnemyGridTimerGridGUI();
-        this.update();
-    }
-    Object.defineProperty(InfoBarEnemyGridGUI, "fullPath", {
-        get: function () {
-            return InfoBarGUI.fullPath + ">#" + InfoBarEnemyGridGUI._divID;
-        },
-        enumerable: false,
-        configurable: true
-    });
-    InfoBarEnemyGridGUI.prototype.update = function () {
-        this._enemyGrindGUIs.forEach(function (e, i) { i < InfoBarEnemyGridGUI._nrEnemyGridGUIs ? e.show() : e.hide(); });
-    };
-    InfoBarEnemyGridGUI.prototype.resetTimer = function () {
-        this._timerGridGUI.reset();
-    };
-    InfoBarEnemyGridGUI.prototype.resetFightRound = function () {
-        this._timerGridGUI.resetFightRound();
-    };
-    InfoBarEnemyGridGUI._divID = "FSInfoBarEnemyGrid";
-    InfoBarEnemyGridGUI._nrInstances = 0;
-    InfoBarEnemyGridGUI._nrEnemyGridGUIs = 1;
-    return InfoBarEnemyGridGUI;
-}());
-var InfoBarPlayerInfoGUI = /** @class */ (function () {
-    function InfoBarPlayerInfoGUI() {
-        if (InfoBarPlayerInfoGUI._nrInstances > 0) {
-            throw "InfoBarPlayerInfoGUI already has an instance running!";
-        }
-        InfoBarPlayerInfoGUI._nrInstances += 1;
-        this._div = document.getElementById(InfoBarPlayerInfoGUI._divID);
-    }
-    InfoBarPlayerInfoGUI.prototype.resetFightRound = function () {
-    };
-    InfoBarPlayerInfoGUI._divID = "FSInfOBarPlayerInfo";
-    InfoBarPlayerInfoGUI._nrInstances = 0;
-    return InfoBarPlayerInfoGUI;
-}());
-var InfoBarGUI = /** @class */ (function () {
-    function InfoBarGUI() {
-        if (InfoBarGUI._nrInstances > 0) {
-            throw "InfoBarGUI already has an instance running!";
-        }
-        InfoBarGUI._nrInstances += 1;
-        this._div = document.getElementById(InfoBarGUI._divID);
-        this._statusBarsGUI = new InfoBarStatusBarsGUI();
-        this._enemyGridGUI = new InfoBarEnemyGridGUI();
-        this._playerInfoGUI = new InfoBarPlayerInfoGUI();
-    }
-    Object.defineProperty(InfoBarGUI, "fullPath", {
-        get: function () {
-            return FightScreenGUI.fullPath + ">#" + InfoBarGUI._divID;
-        },
-        enumerable: false,
-        configurable: true
-    });
-    InfoBarGUI.prototype.resetFightRound = function () {
-        this._statusBarsGUI.resetFightRound();
-        this._enemyGridGUI.resetFightRound();
-        this._playerInfoGUI.resetFightRound();
-    };
-    InfoBarGUI._divID = "FightScreenInfoBar";
-    InfoBarGUI._nrInstances = 0;
-    return InfoBarGUI;
-}());
-var FightScreenGUI = /** @class */ (function () {
-    function FightScreenGUI() {
-        FightScreenGUI._self = this;
-        this._div = document.getElementById(FightScreenGUI._divID);
-        this._infoBarGUI = new InfoBarGUI();
-        this._actionBarGUI = new ActionBarGUI();
-        this._actoinPlanBarGUI = new ActionPlanBarGUI();
-        this.setUpEventListeners();
-    }
-    Object.defineProperty(FightScreenGUI, "fullPath", {
-        get: function () {
-            return "#" + FightScreenGUI._divID;
-        },
-        enumerable: false,
-        configurable: true
-    });
-    Object.defineProperty(FightScreenGUI, "dragging", {
-        get: function () {
-            return this._dragging;
-        },
-        enumerable: false,
-        configurable: true
-    });
-    Object.defineProperty(FightScreenGUI, "dragObjectType", {
-        get: function () {
-            return this._dragObjType;
-        },
-        enumerable: false,
-        configurable: true
-    });
-    Object.defineProperty(FightScreenGUI, "dragObjectData", {
-        get: function () {
-            return this._dragging ? window.sessionStorage.getItem(this._dragObjType) : null;
-        },
-        enumerable: false,
-        configurable: true
-    });
-    Object.defineProperty(FightScreenGUI, "insideDragDestinationArea", {
-        get: function () {
-            return this._insideDragDestArea;
-        },
-        enumerable: false,
-        configurable: true
-    });
-    Object.defineProperty(FightScreenGUI, "dragOffsetX", {
-        get: function () {
-            return this._dragging ? this._dragOffsetX : null;
-        },
-        enumerable: false,
-        configurable: true
-    });
-    Object.defineProperty(FightScreenGUI, "dragOffsetY", {
-        get: function () {
-            return this._dragging ? this._dragOffsetY : null;
-        },
-        enumerable: false,
-        configurable: true
-    });
-    FightScreenGUI.startDrag = function (dragObjectType, dragObject, dragObjectData, e, releasableDrag) {
-        if (releasableDrag === void 0) { releasableDrag = false; }
+    static startDrag(dragObjectType, dragObjectData, e, releasableDrag = false) {
         if (this._dragging == false) {
             this._dragging = true;
             this._releasableDrag = releasableDrag;
             this._insideDragDestArea = false;
             this._dragObjType = dragObjectType;
-            this._dragObj = dragObject;
             window.sessionStorage.setItem(dragObjectType, dragObjectData);
-            var leftObj = Number(dragObject.left.slice(0, -2));
-            var topObj = Number(dragObject.top.slice(0, -2));
+            let leftObj = Number(this._dragObj.left.slice(0, -2));
+            let topObj = Number(this._dragObj.top.slice(0, -2));
             this._dragOffsetX = e.pageX - leftObj;
             this._dragOffsetY = e.pageY - topObj;
         }
-    };
-    FightScreenGUI.enterDragDestinationArea = function () {
+    }
+    static enterDragDestinationArea() {
         if (this.dragging) {
             this._insideDragDestArea = true;
         }
-    };
-    FightScreenGUI.exitDragDestinationArea = function () {
+    }
+    static exitDragDestinationArea() {
         if (this.dragging) {
             this._insideDragDestArea = false;
         }
-    };
-    FightScreenGUI.endDrag = function () {
+    }
+    static endDrag() {
         if (this.dragging) {
             window.sessionStorage.removeItem(this._dragObjType);
             this._dragging = false;
             this._releasableDrag = null;
             this._insideDragDestArea = null;
             this._dragObjType = null;
-            this._dragObj = null;
+            this._dragObj.reset();
         }
-    };
-    FightScreenGUI.resetFightRound = function () {
+    }
+    static moveWithMouse(e) {
+        this._dragObj.moveWithMouse(e);
+    }
+    static setUpEventListeners() {
+        DragAPI._body.addEventListener('mousemove', (e) => DragAPI.onMouseMove(e));
+    }
+    static onMouseMove(e) {
+        if (this.dragging) {
+            DragAPI._dragObj.moveWithMouse(e);
+        }
+    }
+}
+DragAPI._body = document.body;
+DragAPI._dragging = false;
+DragAPI._releasableDrag = null;
+DragAPI._insideDragDestArea = null;
+DragAPI._dragObjType = null;
+DragAPI._dragObj = new DragObejctGUI();
+class FightScreenGUI {
+    static get fullPath() {
+        return "#" + FightScreenGUI._divID;
+    }
+    static resetFightRound() {
         this._self.resetFightRound();
-    };
-    FightScreenGUI.prototype.setUpEventListeners = function () {
-        var c_obj = this;
-        this._div.addEventListener('mousemove', function (e) { return c_obj.onMouseMove(e, c_obj); });
-    };
-    FightScreenGUI.prototype.onMouseMove = function (e, c_obj) {
-        if (FightScreenGUI.dragging) {
-            FightScreenGUI._dragObj.moveWithMouse(e);
+    }
+    constructor() {
+        FightScreenGUI._self = this;
+        this._div = document.getElementById(FightScreenGUI._divID);
+        this._infoBarGUI = new InfoBarGUIs.InfoBarGUI();
+        this._actionBarGUI = new ActionBarGUIs.ActionBarGUI();
+        this._actoinPlanBarGUI = new ActionPlanBarGUIs.ActionPlanBarGUI();
+        this.setUpEventListeners();
+    }
+    setUpEventListeners() {
+        let c_obj = this;
+        this._div.addEventListener('mousemove', (e) => c_obj.onMouseMove(e, c_obj));
+    }
+    onMouseMove(e, c_obj) {
+        if (DragAPI.dragging) {
+            DragAPI.moveWithMouse(e);
         }
-    };
-    FightScreenGUI.prototype.resetFightRound = function () {
+    }
+    resetFightRound() {
         this._infoBarGUI.resetFightRound();
         this._actoinPlanBarGUI.resetFightRound();
-    };
-    FightScreenGUI._divID = "FightScreen";
-    FightScreenGUI._dragging = false;
-    FightScreenGUI._releasableDrag = null;
-    FightScreenGUI._insideDragDestArea = null;
-    FightScreenGUI._dragObjType = null;
-    FightScreenGUI._dragObj = null;
-    return FightScreenGUI;
-}());
-var FSGUI = new FightScreenGUI();
+    }
+}
+FightScreenGUI._divID = "FightScreen";
+DragAPI.setUpEventListeners();
+let FSGUI = new FightScreenGUI();
 //# sourceMappingURL=main.js.map

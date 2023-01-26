@@ -144,7 +144,6 @@ div {
     cursor: default
 }
 #FSInfoBarEnemyGrid > .plan_countdown > .end_planning {
-    
     color:aliceblue;
     text-align: center;
     grid-column-start: 2;
@@ -164,6 +163,7 @@ div {
     --FSAB-col1-width: 250px;
     --FSAB-col2-width: 860px;
     --FSAB-col3-width: 250px;
+    --FSAB-list-elem-height: 32px;
     display: grid;
     grid-template-columns: var(--FSAB-col1-width) var(--FSAB-col2-width) var(--FSAB-col3-width);
     grid-column-gap: var(--FS-grid-col-gap);
@@ -189,6 +189,7 @@ div {
     display: flex;
     flex-direction: row;
     position: relative;
+    width: 688px;
 }
 
 #FSActionBarAreaGrid > .row > .cell {
@@ -200,6 +201,34 @@ div {
 #FSActionBarOtherActions {
     grid-column: 3;
     border: solid red 3px;
+    pointer-events: all;
+}
+
+#FightScreenActionBar > div > .action_list_element {
+    border: solid red 2px;
+    width: calc(var(--FSAB-col1-width) - 6px);
+    display:flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#FSActoinBarDragAction {
+    pointer-events: none;
+    border: solid red 4px;
+    position: absolute;
+    width: 200px;
+    height: 32px;
+    display:flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#FightScreenDragObject {
+    display:flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    position: absolute;
 }
 
 #FightScreenActionPlanBar {

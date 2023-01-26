@@ -55,8 +55,8 @@ class Card {
     get copy():Card {
         return new Card(this._suit, this._value, this._manaType);
     }
-    toString(): string {
-        return this._value + this._suit;
+    get HTMLString(): string {
+        return this._value + "<br>" + this._suit;
     }
     save(): string {
         let sep: string = getComputedStyle(document.body).getPropertyValue("--DEF-save-level0-sep");
@@ -185,186 +185,6 @@ class Hand {
     }
 }
 
-/*                                      GUI                                                 */
-
-class CardGUI {
-    static readonly _divClass: string = ".card";
-    private _card: Card;
-    private _div: HTMLElement;
-    constructor(div: HTMLElement, card: Card = null) {
-        this._card = card;
-        this._div = div;
-    }
-    get card(): Card {
-        return this._card;
-    }
-    set card(card: Card) {
-        this._card = card;
-        this.update();
-    }
-    update(): void {
-        if(this.card == null) {
-            this._div.style.display = 'none';
-        }
-        else {
-            this._div.style.display = 'block';
-            this._div.innerHTML = this.card.value + "<br>" + this.card.suit;
-        }
-        
-    }
-    reset(): void {
-        this._div.textContent = "";
-        this._div.hidden = true;
-        this._card = null;
-    }
-    setAsTemp(): void {
-        this._div.style.opacity = "0.5";
-    }
-    setAsPerm(): void {
-        this._div.style.opacity = "1";
-    }
-    setLeft(left: number): void {
-        //set the left property of style of the div to allow for stylizing the card display format
-        this._div.style.left = left.toString() + "px";
-    }
-}
-
-class HandGUI {
-    static readonly _divClass: string = ".card_holder";
-    
-    private _cardGUIs: CardGUI[] = [];
-    private _div: HTMLElement;
-    private _hand: Hand;
-    constructor(super_path:string) {
-        let path: string = super_path + ">" + HandGUI._divClass;
-        this._div = document.querySelector(path);
-        document.querySelectorAll(path + ">" + CardGUI._divClass).forEach(e => this._cardGUIs.push(new CardGUI(e as HTMLElement)));
-        this._hand = new Hand();
-        this.stylizeDeck();
-    }
-    get value(): number {
-        return this._hand.value;
-    }
-    get busted(): boolean {
-        return this._hand.busted;
-    }
-    get final(): boolean {
-        return this.busted || this._hand.final;
-    }
-    update(): void {
-        this._cardGUIs.forEach((e, i) => e.card = this._hand.get(i));
-    }
-    addCard(card: Card): void {
-        this._cardGUIs[this._hand.length].card = card;
-    }
-    addTempCard(card: Card): void {
-        //visual and deck changes
-        this._cardGUIs[this._hand.length].card = card;
-        this._cardGUIs[this._hand.length].setAsTemp();
-        this._hand.addCard(card);
-    }
-    finalizeTempCard(): void {
-        //visual changes only
-        this._cardGUIs[this._hand.length - 1].setAsPerm();        
-    }
-    removeTempCard(): void {
-        this._cardGUIs[this._hand.length - 1].card = null;
-        this._hand.popCard();
-    }
-    stylizeDeck(): void {
-        this._cardGUIs.forEach((e: CardGUI, i: number) => {
-            e.setLeft(i * 20.96);
-        });
-    }
-    resetFightRound(): void {
-        this._hand.reset();
-        this.update();
-    }
-}
-
-class ActionGUI {
-    static readonly _divClass: string = ".action_card_space";
-
-    private _entered: boolean = false;
-    private _handGUI: HandGUI;
-    private _div: HTMLElement;
-    constructor(nr: string) {
-        this._handGUI = new HandGUI(ActionGUI._divClass + "._" + nr);
-        this._div = document.querySelector(ActionGUI._divClass + "._" + nr) as HTMLElement;
-        this.setUpEventListeners();
-        this.update();
-    }
-    get busted(): boolean {
-        return this._handGUI.busted;
-    }
-    get final(): boolean {
-        return this.busted || this._handGUI.final;
-    }
-
-    setUpEventListeners() {
-        let c_obj: ActionGUI = this;
-        c_obj._div.addEventListener('mouseenter', (e: MouseEvent) => c_obj.onMouseEnter(e, c_obj));
-        c_obj._div.addEventListener('mouseleave', (e: MouseEvent) => c_obj.onMouseLeave(e, c_obj));
-        c_obj._div.addEventListener('mouseup', (e: MouseEvent) => c_obj.onMouseUp(e, c_obj));
-    }
-    onMouseEnter(e: MouseEvent, c_obj: ActionGUI) {
-        if(FightScreenGUI.dragObjectType == DragCardGUI._dragObjType && ! c_obj._handGUI.busted) {
-            c_obj._handGUI.addTempCard(Card.load(FightScreenGUI.dragObjectData));
-            c_obj.update();
-            c_obj._entered = true;
-            FightScreenGUI.enterDragDestinationArea();
-
-        }
-    }
-    onMouseLeave(e: MouseEvent, c_obj: ActionGUI) {
-        if(FightScreenGUI.dragObjectType == DragCardGUI._dragObjType && c_obj._entered) {
-            c_obj._handGUI.removeTempCard();
-            c_obj.update();
-            c_obj._entered = false;
-            FightScreenGUI.exitDragDestinationArea();
-        }
-    }
-    onMouseUp(e: MouseEvent, c_obj: ActionGUI) {
-        if(FightScreenGUI.dragObjectType == DragCardGUI._dragObjType) {
-            c_obj._handGUI.finalizeTempCard();
-            ActionHolderGUI.setFinalAll();
-            c_obj._entered = false;
-            FightScreenGUI.endDrag();
-            DeckGUI.resetDragCard();
-        }
-    }
-    update(): void {
-        this._handGUI.update();
-        let value = this._handGUI.value;
-        if(value < 14) {
-            this._div.style.border = 'dashed red 5px';
-        }
-        else if(value < 21) {
-            this._div.style.border = 'dashed green 5px';
-        }
-        else if(value == 21) {
-            this._div.style.border = 'solid green 5px';
-        }
-        else {
-            this._div.style.border = 'solid red 5px';
-        }
-    }
-    show(): void {
-        this._div.style.display = "flex";
-    }
-    hide(): void {
-        this._div.style.display = "none";
-    }
-    addCard(card: Card): void {
-        this._handGUI.addCard(card);
-    }
-    resetFightRound(): void {
-        this._handGUI.resetFightRound();
-        this.update();
-    }
-
-}
-
 class Player {
     private _nrActions: number = 2;
     private _nrDecks: number = 1;
@@ -376,7 +196,32 @@ class Player {
     }
 }
 
-//who implement this need to have the static field
+class Action {
+    static load(save: string): Action {
+        let a: Action = new Action('');
+        a.load(save);
+        return a;
+    }
+
+    private _name: string;
+    constructor(name: string) {
+        this._name = name;
+    }
+    get name() {
+        return this._name;
+    }
+    save(): string {
+        return this._name;
+    }
+    load(save: string): void {
+        let i: number = 0;
+        let s_list = save.split("\\e\\");
+        this._name = s_list[i]; i++;
+    }
+}
+
+/*                                      GUI                                                 */
+
 class DraggableGUI {
     static readonly _dragObjType: string;
     moveWithMouse(e: MouseEvent): void {}
@@ -384,496 +229,939 @@ class DraggableGUI {
     get top(): string { return "" }
 }
 
-class DragCardGUI extends DraggableGUI {
-    static readonly _divID: string = "#FSActionPlanBarDragCard";
-    static readonly _dragObjType: string = 'card';
-    private _card: Card;
+namespace ActionPlanBarGUIs {
+    class CardGUI {
+        static readonly _divClass: string = ".card";
+        private _card: Card;
+        private _div: HTMLElement;
+        constructor(div: HTMLElement, card: Card = null) {
+            this._card = card;
+            this._div = div;
+        }
+        get card(): Card {
+            return this._card;
+        }
+        set card(card: Card) {
+            this._card = card;
+            this.update();
+        }
+        update(): void {
+            if(this.card == null) {
+                this._div.style.display = 'none';
+            }
+            else {
+                this._div.style.display = 'block';
+                this._div.innerHTML = this.card.value + "<br>" + this.card.suit;
+            }
+            
+        }
+        reset(): void {
+            this._div.textContent = "";
+            this._div.hidden = true;
+            this._card = null;
+        }
+        setAsTemp(): void {
+            this._div.style.opacity = "0.5";
+        }
+        setAsPerm(): void {
+            this._div.style.opacity = "1";
+        }
+        setLeft(left: number): void {
+            //set the left property of style of the div to allow for stylizing the card display format
+            this._div.style.left = left.toString() + "px";
+        }
+    }
+    
+    class HandGUI {
+        static readonly _divClass: string = ".card_holder";
+        
+        private _cardGUIs: CardGUI[] = [];
+        private _div: HTMLElement;
+        private _hand: Hand;
+        constructor(super_path:string) {
+            let path: string = super_path + ">" + HandGUI._divClass;
+            this._div = document.querySelector(path);
+            document.querySelectorAll(path + ">" + CardGUI._divClass).forEach(e => this._cardGUIs.push(new CardGUI(e as HTMLElement)));
+            this._hand = new Hand();
+            this.stylizeDeck();
+        }
+        get value(): number {
+            return this._hand.value;
+        }
+        get busted(): boolean {
+            return this._hand.busted;
+        }
+        get final(): boolean {
+            return this.busted || this._hand.final;
+        }
+        update(): void {
+            this._cardGUIs.forEach((e, i) => e.card = this._hand.get(i));
+        }
+        addCard(card: Card): void {
+            this._cardGUIs[this._hand.length].card = card;
+        }
+        addTempCard(card: Card): void {
+            //visual and deck changes
+            this._cardGUIs[this._hand.length].card = card;
+            this._cardGUIs[this._hand.length].setAsTemp();
+            this._hand.addCard(card);
+        }
+        finalizeTempCard(): void {
+            //visual changes only
+            this._cardGUIs[this._hand.length - 1].setAsPerm();        
+        }
+        removeTempCard(): void {
+            this._cardGUIs[this._hand.length - 1].card = null;
+            this._hand.popCard();
+        }
+        stylizeDeck(): void {
+            this._cardGUIs.forEach((e: CardGUI, i: number) => {
+                e.setLeft(i * 20.96);
+            });
+        }
+        resetFightRound(): void {
+            this._hand.reset();
+            this.update();
+        }
+    }
+    
+    class ActionGUI {
+        static readonly _divClass: string = ".action_card_space";
+    
+        private _entered: boolean = false;
+        private _handGUI: HandGUI;
+        private _div: HTMLElement;
+        constructor(nr: string) {
+            this._handGUI = new HandGUI(ActionGUI._divClass + "._" + nr);
+            this._div = document.querySelector(ActionGUI._divClass + "._" + nr) as HTMLElement;
+            this.setUpEventListeners();
+            this.update();
+        }
+        get busted(): boolean {
+            return this._handGUI.busted;
+        }
+        get final(): boolean {
+            return this.busted || this._handGUI.final;
+        }
+    
+        setUpEventListeners() {
+            let c_obj: ActionGUI = this;
+            c_obj._div.addEventListener('mouseenter', (e: MouseEvent) => c_obj.onMouseEnter(e, c_obj));
+            c_obj._div.addEventListener('mouseleave', (e: MouseEvent) => c_obj.onMouseLeave(e, c_obj));
+            c_obj._div.addEventListener('mouseup', (e: MouseEvent) => c_obj.onMouseUp(e, c_obj));
+        }
+        onMouseEnter(e: MouseEvent, c_obj: ActionGUI) {
+            if(DragAPI.dragObjectType == DragCardGUI._dragObjType && ! c_obj._handGUI.busted) {
+                c_obj._handGUI.addTempCard(Card.load(DragAPI.dragObjectData));
+                c_obj.update();
+                c_obj._entered = true;
+                DragAPI.enterDragDestinationArea();
+    
+            }
+        }
+        onMouseLeave(e: MouseEvent, c_obj: ActionGUI) {
+            if(DragAPI.dragObjectType == DragCardGUI._dragObjType && c_obj._entered) {
+                c_obj._handGUI.removeTempCard();
+                c_obj.update();
+                c_obj._entered = false;
+                DragAPI.exitDragDestinationArea();
+            }
+        }
+        onMouseUp(e: MouseEvent, c_obj: ActionGUI) {
+            if(DragAPI.dragObjectType == DragCardGUI._dragObjType) {
+                c_obj._handGUI.finalizeTempCard();
+                ActionHolderGUI.setFinalAll();
+                c_obj._entered = false;
+                DragAPI.endDrag();
+                DeckGUI.resetDragCard();
+            }
+        }
+        update(): void {
+            this._handGUI.update();
+            let value = this._handGUI.value;
+            if(value < 14) {
+                this._div.style.border = 'dashed red 5px';
+            }
+            else if(value < 21) {
+                this._div.style.border = 'dashed green 5px';
+            }
+            else if(value == 21) {
+                this._div.style.border = 'solid green 5px';
+            }
+            else {
+                this._div.style.border = 'solid red 5px';
+            }
+        }
+        show(): void {
+            this._div.style.display = "flex";
+        }
+        hide(): void {
+            this._div.style.display = "none";
+        }
+        addCard(card: Card): void {
+            this._handGUI.addCard(card);
+        }
+        resetFightRound(): void {
+            this._handGUI.resetFightRound();
+            this.update();
+        }
+    
+    }
+    
+    class DragCardGUI extends DraggableGUI {
+        static readonly _divID: string = "#FSActionPlanBarDragCard";
+        static readonly _dragObjType: string = 'card';
+        private _card: Card;
+        private _div: HTMLElement;
+        constructor(div: HTMLElement, card: Card = null) {
+            super();
+            this._card = card;
+            this._div = div;
+        }
+        get card(): Card {
+            return this._card;
+        }
+        set card(card: Card) {
+            this._card = card;
+            this.initialUpdate();
+        }
+        get left(): string {
+            return this._div.style.left;
+        }
+        get top(): string {
+            return this._div.style.top;
+        }
+        initialUpdate(): void {
+            if(this.card == null) {
+                this._div.style.display = 'none';
+            }
+            else {
+                this._div.style.display = 'block';
+                this._div.innerHTML = this.card.value + "<br>" + this.card.suit;
+            }
+            
+        }
+        setPosition(x: number, y: number, adjust_y: boolean = true): void {
+            let width: number = Number(getComputedStyle(this._div).getPropertyValue("--FSAPB-card-width").slice(0, -2));
+            let height: number = Number(getComputedStyle(this._div).getPropertyValue("--FSAPB-card-height").slice(0, -2));
+            this._div.style.left = (x ).toString() + "px";
+            if(adjust_y) {
+                this._div.style.top = (y - height/2).toString() + "px";
+            }
+            else {
+                this._div.style.top = (y).toString() + "px";
+            }
+            
+        }
+        setOpacity(op: number): void {
+            this._div.style.opacity = op.toString();
+        }
+        reset(): void {
+            this._div.textContent = "";
+            this.card = null;
+        }
+        moveWithMouse(e: MouseEvent): void {
+            this._div.style.left = (e.pageX - DragAPI.dragOffsetX).toString() + "px";
+            this._div.style.top = (e.pageY - DragAPI.dragOffsetY).toString() + "px";
+        }
+    }
+    
+    class DeckGUI {
+        static readonly _divClass: string = ".deck";
+        static readonly _dragProperties: string[] = ['width', 'height', 'border', 'backgroundColor'];
+        private static _dragCardGUI: DragCardGUI = new DragCardGUI(document.getElementById('FSActionPlanBarDragCard'));
+    
+        static resetDragCard(): void {
+            DeckGUI._dragCardGUI.reset();
+        }
+    
+        private _div: HTMLElement;
+        private _deck: Deck;
+        constructor(div: HTMLElement) {
+            this._div = div;
+            this._deck = new Deck();
+            this.setUpEventListeners();
+        }
+        setContentSuitsValuesMana(suits: string[], values: string[], manaType: ManaTypes = ManaTypes.neutral): void {
+            this._deck.setContentSuitsValuesMana(suits, values, manaType);
+        }
+        setUpEventListeners(): void {
+            let c_obj: DeckGUI = this;
+            this._div.addEventListener("mousedown", (e: MouseEvent) => c_obj.onMouseDown(e, c_obj));
+        }
+        onMouseDown(e: MouseEvent, c_obj: DeckGUI): void {
+            if(!ActionPlanBarGUI._finalAll && !DragAPI.dragging) {
+                let left: number = c_obj._div.getBoundingClientRect().left - 6;
+                let top: number = c_obj._div.getBoundingClientRect().top - 52;
+                let c: Card = c_obj._deck.draw();
+                this.setUpDragObject(left, top, c);
+                DragAPI.startDrag(DragCardGUI._dragObjType, c.save(), e);
+            }
+        }
+        setUpDragObject(left: number, top: number, card: Card): void {
+            let styleSheet = getComputedStyle(this._div);
+            let styleNeeded = new Map<string, string>();
+            DeckGUI._dragProperties.forEach(
+                (e) => {styleNeeded.set(e, styleSheet[e])}
+            )
+            styleNeeded.set('left', left + "px");
+            styleNeeded.set('top', top + "px");
+            styleNeeded.set('display', 'block');
+            DragAPI.setUpDragObject(styleNeeded, this.createDragObjectInnerHTML(card));
+        }
+        createDragObjectInnerHTML(card: Card): string {
+            return card.HTMLString;
+        }
+        show(): void {
+            this._div.style.display = 'grid';
+        }
+        hide(): void {
+            this._div.style.display = 'none';
+        }
+        resetFightRound(): void {
+            this.setContentSuitsValuesMana(Deck.suits, Deck.values);
+        }
+    }
+    
+    class DeckHolderGUI {
+        static readonly _divClass: string = ".deck_holder";
+    
+        private  _currentDeckGUIs: number = 1;
+        private _deckGUIs: DeckGUI[] = [];
+    
+        constructor() {
+            //set up deck GUI's
+            document.querySelectorAll('#FightScreenActionPlanBar' + '>' + DeckHolderGUI._divClass + '>' + DeckGUI._divClass).forEach(
+                (e: Element) => {this._deckGUIs.push(new DeckGUI(e as HTMLElement));}
+            );
+            this._deckGUIs[0].setContentSuitsValuesMana(Deck.suits, Deck.values);
+            this.update();
+        }
+        update(): void {
+            this._deckGUIs.forEach(
+                (e:DeckGUI, i:number) => {i < this._currentDeckGUIs ? e.show() : e.hide();}
+            );
+        }
+        resetFightRound(): void {
+            this._deckGUIs.forEach(
+                (e:DeckGUI, i:number) => {i < this._currentDeckGUIs ? e.resetFightRound() : null;}
+            );
+        }
+    }
+    
+    class ActionHolderGUI {
+    
+        private static _currentActionGUIs: number = 7;
+        private static _actionGUIs: ActionGUI[] = [];
+    
+        constructor(superDivID: string) {
+            //set up deck GUI's
+            document.querySelectorAll(superDivID + '>' + ActionGUI._divClass).forEach(
+                (e: Element, i: number) => {ActionHolderGUI._actionGUIs.push(new ActionGUI(i.toString()));}
+            );
+            this.update();
+        }
+        static setFinalAll(): void {
+            let foundNotFinal: boolean = false;
+            ActionHolderGUI._actionGUIs.forEach((e, i) => {
+                if(!e.final && i < ActionHolderGUI._currentActionGUIs) {
+                    ActionPlanBarGUI._finalAll = false;
+                    foundNotFinal = true;
+                    return;
+                }
+            });
+            if(!foundNotFinal) {
+                ActionPlanBarGUI._finalAll = true;
+            }
+        }
+        update(): void {
+            ActionHolderGUI._actionGUIs.forEach(
+                (e:ActionGUI, i:number) => {i < ActionHolderGUI._currentActionGUIs ? e.show() : e.hide();}
+            );
+        }
+        resetFightRound(): void {
+            ActionHolderGUI._actionGUIs.forEach(
+                (e:ActionGUI, i:number) => {
+                    if(i < ActionHolderGUI._currentActionGUIs) { e.resetFightRound(); };
+                }
+            );
+            ActionHolderGUI.setFinalAll();
+        }
+    }
+    
+    export class ActionPlanBarGUI {
+        
+        static readonly _divID: string = '#FightScreenActionPlanBar';
+        static _finalAll: boolean = false;
+    
+        private _deckHolderGUI: DeckHolderGUI;
+        private _actionHolderGUI: ActionHolderGUI;
+    
+        constructor() {
+            this._deckHolderGUI = new DeckHolderGUI();
+            this._actionHolderGUI = new ActionHolderGUI(ActionPlanBarGUI._divID);
+        }
+        resetFightRound():void  {
+            this._deckHolderGUI.resetFightRound();
+            this._actionHolderGUI.resetFightRound();
+        }
+    }
+}
+
+namespace ActionBarGUIs {
+    class AreaGridCellGUI {
+        static readonly _divClass: string = ".cell";
+        static get classFullPath(): string {
+            return AreaGridRowGUI.classFullPath + ">" + this._divClass;
+        }
+
+        private _div: HTMLElement;
+        constructor(div: HTMLElement) {
+            this._div = div;
+            this.setUpEventListeners();
+        }
+        setUpEventListeners() {
+            let c_obj: AreaGridCellGUI = this;
+            this._div.addEventListener('mouseenter', (e: MouseEvent) => c_obj.onMouseEnter(e, c_obj));
+            this._div.addEventListener('mouseleave', (e: MouseEvent) => c_obj.onMouseLeave(e, c_obj));
+        }
+        onMouseEnter(e: MouseEvent, c_obj: AreaGridCellGUI) {
+            c_obj._div.style.backgroundColor = 'rgb(0,0,255)';
+        }
+        onMouseLeave(e: MouseEvent, c_obj: AreaGridCellGUI) {
+            c_obj._div.style.backgroundColor = 'rgb(0,0,0)';
+        }
+    }
+    
+    class AreaGridRowGUI {
+        static readonly _divClass: string = ".row";
+        private static readonly _rowOffset: number = 28;
+        static get classFullPath(): string {
+            return ActionBarAreaGridGUI.fullPath + ">" + this._divClass;
+        }
+    
+        private _div: HTMLElement;
+        private _cellGUIs: AreaGridCellGUI[] = [];
+        constructor(div: HTMLElement, nr: number, offsetInd: number) {
+            this._div = div;
+            this._div.style.left = (offsetInd * AreaGridRowGUI._rowOffset).toString() + "px";
+            document.querySelectorAll(AreaGridRowGUI.classFullPath + "._" + nr + ">" + AreaGridCellGUI._divClass).forEach(
+                (e) => this._cellGUIs.push(new AreaGridCellGUI(e as HTMLElement))
+            );
+        }
+    }
+    
+    class ActionBarAreaGridGUI {
+        static readonly _divID: string = "FSActionBarAreaGrid";
+        private static _nrInstances: number = 0;
+    
+        static get fullPath(): string {
+            return ActionBarGUI.fullPath + ">#" + this._divID;
+        }
+    
+        private _div: HTMLElement;
+        private _rowGUIs: AreaGridRowGUI[] = [];
+        constructor() {
+            if(ActionBarAreaGridGUI._nrInstances > 0) {
+                throw "ActionBarAreaGridGUI already has an instance running!";
+            }
+            ActionBarAreaGridGUI._nrInstances += 1;
+            this._div = document.getElementById(ActionBarAreaGridGUI._divID);
+            document.querySelectorAll(AreaGridRowGUI.classFullPath).forEach(
+                (e, i, l) => {this._rowGUIs.push(new AreaGridRowGUI(e as HTMLElement, i, l.length - i - 1))}
+            )
+        }
+    }
+
+    class DragActionGUI {
+        static readonly _dragObjType: string = "action";
+        static readonly _divID: string = "FSActoinBarDragAction";
+
+        private _div: HTMLElement;
+        private _action: Action = null;
+        get left(): string { return this._div.style.left }
+        get top(): string { return this._div.style.top }
+        constructor() {
+            this._div = document.getElementById(DragActionGUI._divID);
+        }
+        set action(a: Action) {
+            this._action = a;
+            if(a == null) {
+                this._div.style.display = 'none';
+            }
+            else  {
+                this._div.style.display = 'flex';
+                this._div.innerHTML = a.name;
+            }
+        }
+        get action(): Action {
+            return this._action;
+        }
+        setPosition(x: number, y: number, adjust_y: boolean = true): void {
+            let width: number = Number(getComputedStyle(this._div).getPropertyValue("width").slice(0, -2));
+            let height: number = Number(getComputedStyle(this._div).getPropertyValue('height').slice(0, -2));
+            this._div.style.left = (x ).toString() + "px";
+            if(adjust_y) {
+                this._div.style.top = (y - height).toString() + "px";
+            }
+            else {
+                this._div.style.top = (y).toString() + "px";
+            }
+        }
+        setOpacity(op: number): void {
+            this._div.style.opacity = op.toString();
+        }
+        reset(): void {
+            this._div.textContent = "";
+            this.action = null;
+        }
+        moveWithMouse(e: MouseEvent): void {
+            this._div.style.left = (e.pageX - DragAPI.dragOffsetX).toString() + "px";
+            this._div.style.top = (e.pageY - DragAPI.dragOffsetY).toString() + "px";
+        }
+    }
+
+    class ActionListElementGUI {
+        static readonly _elementClass: string = ".action_list_element";
+        static readonly _dragProperties: string[] = ['width', 'height', 'border', 'backgroundColor', 'display'];
+        static _dragActionGUI: DragActionGUI = new DragActionGUI();
+        private _action: Action;
+        private _div: HTMLElement;
+        get action(): Action {
+            return this._action;
+        }
+        set action(a: Action) {
+            this._action = a;
+            this.display();
+        }
+        constructor(div: HTMLElement) {
+            this._div = div;
+            this.setUpEventListeners();
+        }
+        setUpEventListeners() {
+            let c_obj: ActionListElementGUI = this;
+            this._div.addEventListener('mousedown', (e: MouseEvent) => c_obj.onMouseDown(e, c_obj));
+        }
+        display(): void {
+            this._div.innerHTML = this.repr();
+        }
+        repr(): string {
+            return this._action != null ? this._action.name : "";
+        }
+        setHeight(height: number) {
+            this._div.style.height = (height - 2 * Number(getComputedStyle(this._div).borderWidth.slice(0, -2))) + "px";
+        }
+        onMouseDown(e: MouseEvent, c_obj: ActionListElementGUI): void {
+            if(!DragAPI.dragging && c_obj.action != null) {
+                let left: number = c_obj._div.getBoundingClientRect().left - 8;
+                let top: number = c_obj._div.getBoundingClientRect().top - 52;
+                c_obj.setUpDragObject(left, top);
+                DragAPI.startDrag(DragActionGUI._dragObjType, c_obj.action.save(), e);
+            }
+        }
+        setUpDragObject(left: number, top: number): void {
+            let styleSheet = getComputedStyle(this._div);
+            let styleNeeded = new Map<string, string>();
+            ActionListElementGUI._dragProperties.forEach(
+                (e) => {styleNeeded.set(e, styleSheet[e])}
+            )
+            styleNeeded.set('left', left + "px");
+            styleNeeded.set('top', top + "px");
+            DragAPI.setUpDragObject(styleNeeded, this.createDragObjectInnerHTML());
+        }
+        createDragObjectInnerHTML(): string {
+            return this._action.name;
+        }
+    }
+    
+    class ActionListGUI {
+        private _listElements: ActionListElementGUI[] = [];
+        private _elements: Action[] = [];
+        private _currentPage: number;
+        private _div: HTMLElement;
+    
+    
+        constructor(div: HTMLElement, elementsPerPage: number) {
+            this._div = div;
+            this.elementsPerPage = elementsPerPage;
+            this._currentPage = 0;
+        }
+        set elementsPerPage(nr: number) {
+            if(nr != this._listElements.length) {
+                while(this._listElements.length < nr) {
+                    let newDiv: HTMLElement = document.createElement('div') as HTMLElement;
+                    newDiv.classList.add(ActionListElementGUI._elementClass.slice(1));
+                    this._div.appendChild(newDiv);
+                    this._listElements.push(new ActionListElementGUI(newDiv));
+                }
+                while(this._listElements.length > nr) {
+                    this._listElements.pop();
+                }
+                let height: number = this._div.clientHeight / this._listElements.length;
+                this._listElements.forEach(
+                    (e) => (e.setHeight(height))
+                );
+                this.update();
+            }
+        }
+        get elementsPerPage() {
+            return this._listElements.length;
+        }
+        get currentPage() {
+            return this._currentPage;
+        }
+        get nrPages() {
+            return Math.ceil(this._elements.length / this.elementsPerPage);
+        }
+        nextPage(): void {
+            if(this.currentPage < this.nrPages) {
+                this._currentPage++;
+            }
+        }
+        getElementOnCurrentPage(i: number): Action {
+            let ind: number = this._currentPage * this._listElements.length + i;
+            if(i > this.elementsPerPage || ind >= this._elements.length) {
+                throw "ListGUI ERROR: Element requested not in list!";
+            }
+            return this._elements[ind];
+        }
+        addToEnd(elem: Action): void {
+            this._elements.push(elem);
+        }
+        update() {
+            let offsetInd = this._currentPage * this.elementsPerPage;
+            this._listElements.forEach(
+                (e, i) => {
+                    i + offsetInd < this._elements.length ? e.action = this._elements[i + offsetInd] : e.action = null;
+                }
+            )
+        }
+    }
+    
+    export class ActionBarGUI {
+        static readonly _divID: string = "FightScreenActionBar";
+        private static readonly _nrElementsPerList: number = 10;
+        private static readonly _spellListID: string = "FSActionBarSpellActions";
+        private static readonly _otherListID: string = "FSActionBarOtherActions";
+        private static _nrInstances: number = 0;
+    
+        static get fullPath(): string {
+            return FightScreenGUI.fullPath + ">#" + this._divID;
+        }
+    
+        private _div: HTMLElement;
+        private _spellActionList: ActionListGUI;
+        private _otherActionList: ActionListGUI;
+        private _areaGridGUI: ActionBarAreaGridGUI;
+        constructor() {
+            if(ActionBarGUI._nrInstances > 0) {
+                throw "InfoBarGUI already has an instance running!";
+            }
+            ActionBarGUI._nrInstances += 1;
+            this._div = document.getElementById(ActionBarGUI._divID);
+
+            this._spellActionList = new ActionListGUI(document.getElementById(ActionBarGUI._spellListID) as HTMLElement, ActionBarGUI._nrElementsPerList);
+            this._areaGridGUI = new ActionBarAreaGridGUI();
+            this._otherActionList = new ActionListGUI(document.getElementById(ActionBarGUI._otherListID) as HTMLElement, ActionBarGUI._nrElementsPerList);
+            this._otherActionList.addToEnd(new Action('A'));
+            this._otherActionList.addToEnd(new Action('B'));
+            this._otherActionList.addToEnd(new Action('C'));
+            
+            this.update();
+        }
+        update(): void {
+            this._spellActionList.update();
+            this._otherActionList.update();
+        }
+    }
+}
+
+namespace InfoBarGUIs {
+    class InfoBarStatusBarsGUI {
+    
+        static readonly _divID: string = "FSInfoBarStatusBars";
+        private static _nrInstances: number = 0;
+    
+        private _div: HTMLElement;
+        constructor() {
+            if(InfoBarStatusBarsGUI._nrInstances > 0) {
+                throw "InfoBarStatusBarsGUI already has an instance running!";
+            }
+            InfoBarStatusBarsGUI._nrInstances += 1;
+            this._div = document.getElementById(InfoBarStatusBarsGUI._divID);
+        }
+        resetFightRound() {
+        
+        }
+    }
+    
+    class EnemyGridGUI {
+        static readonly _divClass: string = ".enemy_cell";
+    
+        private static _divDisplay: string = null;
+    
+        private _div: HTMLElement;
+        constructor(div: HTMLElement) {
+            this._div = div;
+            if(EnemyGridGUI._divDisplay == null) {
+                EnemyGridGUI._divDisplay = this._div.style.display;
+            }
+        }
+        show() {
+            this._div.style.display = EnemyGridGUI._divDisplay;
+        }
+        hide() {
+            this._div.style.display = 'none';
+        }
+    }
+    
+    class TimerGridStopPlanningGUI {
+        static readonly _divClass: string = ".end_planning";
+        static get classFullPath(): string {
+            return EnemyGridTimerGridGUI.fullPath + ">" + this._divClass;
+        }
+        private _div: HTMLElement;
+        constructor(div: HTMLElement) {
+            this._div = div;
+            this.setUpEventListeners();
+        }
+        setUpEventListeners() {
+            let c_obj: TimerGridStopPlanningGUI = this;
+            c_obj._div.addEventListener('mousedown', (e: MouseEvent) => this.onMouseDown(e, c_obj));
+        }
+        onMouseDown(e: MouseEvent, c_obj: TimerGridStopPlanningGUI) {
+            FightScreenGUI.resetFightRound();
+        }
+    }
+    
+    class TimerGridTimerGUI {
+        static readonly _divClass: string = ".timer";
+    
+        private _timer: number;
+        private _timerIntervalID: number = null;
+        static get fullPath(): string {
+            return EnemyGridTimerGridGUI.fullPath + ">" + this._divClass;
+        }
+    
+        private _div: HTMLElement;
+        constructor() {
+            this._div = document.querySelector(TimerGridTimerGUI.fullPath) as HTMLElement;
+        }
+        setTime(sep: string = ":") {
+            let time: number = this._timer;
+            let msec: string = (time % 1000).toString();
+            msec = StringUtil.padRightUntilLength(msec, 3, '0');
+            time = Math.floor(time / 1000)
+            let sec: string = (time % 60).toString();
+            sec = StringUtil.padRightUntilLength(sec, 2, '0');
+            time = Math.floor(time / 60);
+            let min: string = (time % 60).toString();
+            min = StringUtil.padRightUntilLength(min, 2, '0');
+            this._div.innerHTML = min + sep + sec + sep + msec;
+        }
+        resetTimer(time: number): void {
+            this._timer = time;
+        }
+        stopTimer(): void {
+            if(this._timerIntervalID != null) {
+                clearInterval(this._timerIntervalID);
+                this._timerIntervalID = null;
+            }
+        }
+        startTimer(): void {
+            if(this._timerIntervalID == null) {
+                this._timerIntervalID = setInterval(() => {this._timer -= 33; this.setTime()}, 33);
+            }
+        }
+    }
+    
+    class EnemyGridTimerGridGUI {
+        static readonly _divClass: string = ".plan_countdown";
+        static get fullPath(): string {
+            return InfoBarEnemyGridGUI.fullPath + ">" + this._divClass;
+        }
+    
+        private _div: HTMLElement;
+        private _stopPlanningGUIs: TimerGridStopPlanningGUI[] = [];
+        private _timerGUI: TimerGridTimerGUI;
+        private _maxTime: number = 30 * 1000;
+        constructor() {
+            this._div = document.querySelector(EnemyGridTimerGridGUI.fullPath) as HTMLElement;
+            document.querySelectorAll(TimerGridStopPlanningGUI.classFullPath).forEach(
+                (e) => this._stopPlanningGUIs.push(new TimerGridStopPlanningGUI(e as HTMLElement))
+            );
+            this._timerGUI = new TimerGridTimerGUI();
+            this.setUp();
+        }
+        setUp() {
+            this.reset();
+            this._timerGUI.startTimer();
+            this.update();
+    
+        }
+        reset() {
+            this._timerGUI.resetTimer(this._maxTime);
+        }
+        resetFightRound() {
+            this._maxTime -= 500;
+            this._timerGUI.resetTimer(this._maxTime);
+        }
+        update() {
+    
+        }
+    }
+    
+    class InfoBarEnemyGridGUI {
+        
+        static readonly _divID: string = "FSInfoBarEnemyGrid";
+        private static _nrInstances: number = 0;
+        private static readonly _nrEnemyGridGUIs = 1;
+    
+        static get fullPath(): string {
+            return InfoBarGUI.fullPath + ">#" + InfoBarEnemyGridGUI._divID;
+        }
+    
+        private _div: HTMLElement;
+        private _enemyGrindGUIs: EnemyGridGUI[] = [];
+        private _timerGridGUI: EnemyGridTimerGridGUI;
+        constructor() {
+            if(InfoBarEnemyGridGUI._nrInstances > 0) {
+                throw "InfoBarEnemyGridGUI already has an instance running!";
+            }
+            InfoBarEnemyGridGUI._nrInstances += 1;
+            this._div = document.getElementById(InfoBarEnemyGridGUI._divID);
+            document.querySelectorAll(InfoBarEnemyGridGUI.fullPath + ">" + EnemyGridGUI._divClass).forEach(
+                (e) => this._enemyGrindGUIs.push(new EnemyGridGUI(e as HTMLElement))
+            );
+            this._timerGridGUI = new EnemyGridTimerGridGUI();
+            this.update();
+        }
+        update() {
+            this._enemyGrindGUIs.forEach((e, i) => {i < InfoBarEnemyGridGUI._nrEnemyGridGUIs ? e.show() : e.hide()});
+        }
+        resetTimer() {
+            this._timerGridGUI.reset();
+        }
+        resetFightRound() {
+            this._timerGridGUI.resetFightRound();
+        }
+    }
+    
+    class InfoBarPlayerInfoGUI {
+        
+        static readonly _divID: string = "FSInfOBarPlayerInfo";
+        private static _nrInstances: number = 0;
+    
+        private _div: HTMLElement;
+        constructor() {
+            if(InfoBarPlayerInfoGUI._nrInstances > 0) {
+                throw "InfoBarPlayerInfoGUI already has an instance running!";
+            }
+            InfoBarPlayerInfoGUI._nrInstances += 1;
+            this._div = document.getElementById(InfoBarPlayerInfoGUI._divID);
+        }
+        resetFightRound() {
+            
+        }
+    }
+    
+    export class InfoBarGUI {
+        static readonly _divID: string = "FightScreenInfoBar";
+        private static _nrInstances: number = 0;
+    
+        static get fullPath() {
+            return FightScreenGUI.fullPath + ">#" + InfoBarGUI._divID;
+        }
+    
+        private _div: HTMLElement;
+        private _statusBarsGUI: InfoBarStatusBarsGUI;
+        private _enemyGridGUI: InfoBarEnemyGridGUI;
+        private _playerInfoGUI: InfoBarPlayerInfoGUI;
+        constructor() {
+            if(InfoBarGUI._nrInstances > 0) {
+                throw "InfoBarGUI already has an instance running!";
+            }
+            InfoBarGUI._nrInstances += 1;
+            this._div = document.getElementById(InfoBarGUI._divID);
+            this._statusBarsGUI = new InfoBarStatusBarsGUI();
+            this._enemyGridGUI = new InfoBarEnemyGridGUI();
+            this._playerInfoGUI = new InfoBarPlayerInfoGUI();
+        }
+        resetFightRound(): void {
+            this._statusBarsGUI.resetFightRound();
+            this._enemyGridGUI.resetFightRound();
+            this._playerInfoGUI.resetFightRound();
+        }
+    }
+}
+
+class DragObejctGUI {
+    static readonly _divID = "FightScreenDragObject";
+
     private _div: HTMLElement;
-    constructor(div: HTMLElement, card: Card = null) {
-        super();
-        this._card = card;
-        this._div = div;
-    }
-    get card(): Card {
-        return this._card;
-    }
-    set card(card: Card) {
-        this._card = card;
-        this.initialUpdate();
-    }
+    private _style: Map<string, string>;
     get left(): string {
         return this._div.style.left;
     }
     get top(): string {
         return this._div.style.top;
     }
-    initialUpdate(): void {
-        if(this.card == null) {
-            this._div.style.display = 'none';
-        }
-        else {
-            this._div.style.display = 'block';
-            this._div.innerHTML = this.card.value + "<br>" + this.card.suit;
-        }
-        
+    constructor() {
+        this._div = document.getElementById(DragObejctGUI._divID) as HTMLElement;
     }
     setPosition(x: number, y: number, adjust_y: boolean = true): void {
-        let width: number = Number(getComputedStyle(this._div).getPropertyValue("--FSAPB-card-width").slice(0, -2));
-        let height: number = Number(getComputedStyle(this._div).getPropertyValue("--FSAPB-card-height").slice(0, -2));
+        let width: number = Number(getComputedStyle(this._div).getPropertyValue("width").slice(0, -2));
+        let height: number = Number(getComputedStyle(this._div).getPropertyValue('height').slice(0, -2));
         this._div.style.left = (x ).toString() + "px";
         if(adjust_y) {
-            this._div.style.top = (y - height/2).toString() + "px";
+            this._div.style.top = (y - height).toString() + "px";
         }
         else {
             this._div.style.top = (y).toString() + "px";
         }
-        
+    }
+    setInnerHTML(innerHTML: string) {
+        this._div.innerHTML = innerHTML;
     }
     setOpacity(op: number): void {
         this._div.style.opacity = op.toString();
     }
-    reset(): void {
-        this._div.textContent = "";
-        this.card = null;
-    }
-    moveWithMouse(e: MouseEvent): void {
-        this._div.style.left = (e.pageX - FightScreenGUI.dragOffsetX).toString() + "px";
-        this._div.style.top = (e.pageY - FightScreenGUI.dragOffsetY).toString() + "px";
-    }
-}
-
-class DeckGUI {
-    static readonly _divClass: string = ".deck";
-    private static _dragCardGUI: DragCardGUI = new DragCardGUI(document.getElementById('FSActionPlanBarDragCard'));
-
-    static resetDragCard(): void {
-        DeckGUI._dragCardGUI.reset();
-    }
-
-    private _div: HTMLElement;
-    private _deck: Deck;
-    constructor(div: HTMLElement) {
-        this._div = div;
-        this._deck = new Deck();
-        this.setUpEventListeners();
-    }
-    setContentSuitsValuesMana(suits: string[], values: string[], manaType: ManaTypes = ManaTypes.neutral): void {
-        this._deck.setContentSuitsValuesMana(suits, values, manaType);
-    }
-    setUpEventListeners(): void {
-        let c_obj: DeckGUI = this;
-        this._div.addEventListener("mousedown", (e: MouseEvent) => c_obj.onMouseDown(e, c_obj));
-    }
-    onMouseDown(e: MouseEvent, c_obj: DeckGUI): void {
-        if(!ActionPlanBarGUI._finalAll && !FightScreenGUI.dragging) {
-            let c: Card = c_obj._deck.draw();
-            DeckGUI._dragCardGUI.card = c;
-            let left: number = c_obj._div.getBoundingClientRect().left - 12 ;
-            let top: number = c_obj._div.getBoundingClientRect().top + 4;
-            DeckGUI._dragCardGUI.setPosition(left, top);
-            FightScreenGUI.startDrag(DragCardGUI._dragObjType, DeckGUI._dragCardGUI, DeckGUI._dragCardGUI.card.save(), e);
-        }
-    }
-    show(): void {
-        this._div.style.display = 'grid';
-    }
-    hide(): void {
-        this._div.style.display = 'none';
-    }
-    resetFightRound(): void {
-        this.setContentSuitsValuesMana(Deck.suits, Deck.values);
-    }
-}
-
-class DeckHolderGUI {
-    static readonly _divClass: string = ".deck_holder";
-
-    private  _currentDeckGUIs: number = 1;
-    private _deckGUIs: DeckGUI[] = [];
-
-    constructor() {
-        //set up deck GUI's
-        document.querySelectorAll('#FightScreenActionPlanBar' + '>' + DeckHolderGUI._divClass + '>' + DeckGUI._divClass).forEach(
-            (e: Element) => {this._deckGUIs.push(new DeckGUI(e as HTMLElement));}
-        );
-        this._deckGUIs[0].setContentSuitsValuesMana(Deck.suits, Deck.values);
-        this.update();
-    }
-    update(): void {
-        this._deckGUIs.forEach(
-            (e:DeckGUI, i:number) => {i < this._currentDeckGUIs ? e.show() : e.hide();}
-        );
-    }
-    resetFightRound(): void {
-        this._deckGUIs.forEach(
-            (e:DeckGUI, i:number) => {i < this._currentDeckGUIs ? e.resetFightRound() : null;}
-        );
-    }
-}
-
-class ActionHolderGUI {
-
-    private static _currentActionGUIs: number = 7;
-    private static _actionGUIs: ActionGUI[] = [];
-
-    constructor(superDivID: string) {
-        //set up deck GUI's
-        document.querySelectorAll(superDivID + '>' + ActionGUI._divClass).forEach(
-            (e: Element, i: number) => {ActionHolderGUI._actionGUIs.push(new ActionGUI(i.toString()));}
-        );
-        this.update();
-    }
-    static setFinalAll(): void {
-        let foundNotFinal: boolean = false;
-        ActionHolderGUI._actionGUIs.forEach((e, i) => {
-            if(!e.final && i < ActionHolderGUI._currentActionGUIs) {
-                ActionPlanBarGUI._finalAll = false;
-                foundNotFinal = true;
-                return;
-            }
-        });
-        if(!foundNotFinal) {
-            ActionPlanBarGUI._finalAll = true;
-        }
-    }
-    update(): void {
-        ActionHolderGUI._actionGUIs.forEach(
-            (e:ActionGUI, i:number) => {i < ActionHolderGUI._currentActionGUIs ? e.show() : e.hide();}
-        );
-    }
-    resetFightRound(): void {
-        ActionHolderGUI._actionGUIs.forEach(
-            (e:ActionGUI, i:number) => {
-                if(i < ActionHolderGUI._currentActionGUIs) { e.resetFightRound(); };
-            }
-        );
-        ActionHolderGUI.setFinalAll();
-    }
-}
-
-class ActionPlanBarGUI {
-    
-    static readonly _divID: string = '#FightScreenActionPlanBar';
-    static _finalAll: boolean = false;
-
-    private _deckHolderGUI: DeckHolderGUI;
-    private _actionHolderGUI: ActionHolderGUI;
-
-    constructor() {
-        this._deckHolderGUI = new DeckHolderGUI();
-        this._actionHolderGUI = new ActionHolderGUI(ActionPlanBarGUI._divID);
-    }
-    resetFightRound():void  {
-        this._deckHolderGUI.resetFightRound();
-        this._actionHolderGUI.resetFightRound();
-    }
-}
-
-class AreaGridCellGUI {
-    static readonly _divClass: string = ".cell";
-    static get classFullPath(): string {
-        return AreaGridRowGUI.classFullPath + ">" + this._divClass;
-    }
-
-    private _div: HTMLElement;
-    constructor(div: HTMLElement) {
-        this._div = div;
-    }
-}
-
-class AreaGridRowGUI {
-    static readonly _divClass: string = ".row";
-    private static readonly _rowOffset: number = 28;
-    static get classFullPath(): string {
-        return ActionBarAreaGridGUI.fullPath + ">" + this._divClass;
-    }
-
-    private _div: HTMLElement;
-    private _cellGUIs: AreaGridCellGUI[] = [];
-    constructor(div: HTMLElement, nr: number, offset_ind: number) {
-        this._div = div;
-        this._div.style.left = (offset_ind * AreaGridRowGUI._rowOffset).toString() + "px";
-        document.querySelectorAll(AreaGridRowGUI.classFullPath + "._" + nr + ">" + AreaGridCellGUI._divClass).forEach(
-            (e) => this._cellGUIs.push(new AreaGridCellGUI(e as HTMLElement))
-        );
-    }
-}
-
-class ActionBarAreaGridGUI {
-    static readonly _divID: string = "FSActionBarAreaGrid";
-    private static _nrInstances: number = 0;
-
-    static get fullPath(): string {
-        return ActionBarGUI.fullPath + ">#" + this._divID;
-    }
-
-    private _div: HTMLElement;
-    private _rowGUIs: AreaGridRowGUI[] = [];
-    constructor() {
-        if(ActionBarAreaGridGUI._nrInstances > 0) {
-            throw "ActionBarAreaGridGUI already has an instance running!";
-        }
-        ActionBarAreaGridGUI._nrInstances += 1;
-        this._div = document.getElementById(ActionBarAreaGridGUI._divID);
-        document.querySelectorAll(AreaGridRowGUI.classFullPath).forEach(
-            (e, i, l) => {this._rowGUIs.push(new AreaGridRowGUI(e as HTMLElement, i, l.length - i - 1))}
+    setStyle(style: Map<string, string>) {
+        this._style = style;
+        style.forEach(
+            (v, k) => {this._div.style[k] = v;}
         )
     }
-}
-
-class ActionBarGUI {
-    static readonly _divID: string = "FightScreenActionBar";
-    private static _nrInstances: number = 0;
-
-    static get fullPath(): string {
-        return FightScreenGUI.fullPath + ">#" + this._divID;
-    }
-
-
-    private _div: HTMLElement;
-    private _areaGridGUI: ActionBarAreaGridGUI;
-    constructor() {
-        if(ActionBarGUI._nrInstances > 0) {
-            throw "InfoBarGUI already has an instance running!";
-        }
-        ActionBarGUI._nrInstances += 1;
-        this._areaGridGUI = new ActionBarAreaGridGUI();
-        this._div = document.getElementById(ActionBarGUI._divID);
-    }
-}
-
-class InfoBarStatusBarsGUI {
-    
-    static readonly _divID: string = "FSInfoBarStatusBars";
-    private static _nrInstances: number = 0;
-
-    private _div: HTMLElement;
-    constructor() {
-        if(InfoBarStatusBarsGUI._nrInstances > 0) {
-            throw "InfoBarStatusBarsGUI already has an instance running!";
-        }
-        InfoBarStatusBarsGUI._nrInstances += 1;
-        this._div = document.getElementById(InfoBarStatusBarsGUI._divID);
-    }
-    resetFightRound() {
-    
-    }
-}
-
-class EnemyGridGUI {
-    static readonly _divClass: string = ".enemy_cell";
-
-    private static _divDisplay: string = null;
-
-    private _div: HTMLElement;
-    constructor(div: HTMLElement) {
-        this._div = div;
-        if(EnemyGridGUI._divDisplay == null) {
-            EnemyGridGUI._divDisplay = this._div.style.display;
-        }
-    }
-    show() {
-        this._div.style.display = EnemyGridGUI._divDisplay;
-    }
-    hide() {
-        this._div.style.display = 'none';
-    }
-}
-
-class TimerGridStopPlanningGUI {
-    static readonly _divClass: string = ".end_planning";
-    static get classFullPath(): string {
-        return EnemyGridTimerGridGUI.fullPath + ">" + this._divClass;
-    }
-    private _div: HTMLElement;
-    constructor(div: HTMLElement) {
-        this._div = div;
-        this.setUpEventListeners();
-    }
-    setUpEventListeners() {
-        let c_obj: TimerGridStopPlanningGUI = this;
-        c_obj._div.addEventListener('mousedown', (e: MouseEvent) => this.onMouseDown(e, c_obj));
-    }
-    onMouseDown(e: MouseEvent, c_obj: TimerGridStopPlanningGUI) {
-        FightScreenGUI.resetFightRound();
-    }
-}
-
-class TimerGridTimerGUI {
-    static readonly _divClass: string = ".timer";
-
-    private _timer: number;
-    private _timerIntervalID: number = null;
-    static get fullPath(): string {
-        return EnemyGridTimerGridGUI.fullPath + ">" + this._divClass;
-    }
-
-    private _div: HTMLElement;
-    constructor() {
-        this._div = document.querySelector(TimerGridTimerGUI.fullPath) as HTMLElement;
-    }
-    setTime(sep: string = ":") {
-        let time: number = this._timer;
-        let msec: string = (time % 1000).toString();
-        msec = StringUtil.padRightUntilLength(msec, 3, '0');
-        time = Math.floor(time / 1000)
-        let sec: string = (time % 60).toString();
-        sec = StringUtil.padRightUntilLength(sec, 2, '0');
-        time = Math.floor(time / 60);
-        let min: string = (time % 60).toString();
-        min = StringUtil.padRightUntilLength(min, 2, '0');
-        this._div.innerHTML = min + sep + sec + sep + msec;
-    }
-    resetTimer(time: number): void {
-        this._timer = time;
-    }
-    stopTimer(): void {
-        if(this._timerIntervalID != null) {
-            clearInterval(this._timerIntervalID);
-            this._timerIntervalID = null;
-        }
-    }
-    startTimer(): void {
-        if(this._timerIntervalID == null) {
-            this._timerIntervalID = setInterval(() => {this._timer -= 33; this.setTime()}, 33);
-        }
-    }
-}
-
-class EnemyGridTimerGridGUI {
-    static readonly _divClass: string = ".plan_countdown";
-    static get fullPath(): string {
-        return InfoBarEnemyGridGUI.fullPath + ">" + this._divClass;
-    }
-
-    private _div: HTMLElement;
-    private _stopPlanningGUIs: TimerGridStopPlanningGUI[] = [];
-    private _timerGUI: TimerGridTimerGUI;
-    private _maxTime: number = 30 * 1000;
-    constructor() {
-        this._div = document.querySelector(EnemyGridTimerGridGUI.fullPath) as HTMLElement;
-        document.querySelectorAll(TimerGridStopPlanningGUI.classFullPath).forEach(
-            (e) => this._stopPlanningGUIs.push(new TimerGridStopPlanningGUI(e as HTMLElement))
+    reset(): void {
+        //clear class list
+        this._div.classList.forEach(
+            (k) => this._div.classList.remove(k)
         );
-        this._timerGUI = new TimerGridTimerGUI();
-        this.setUp();
-    }
-    setUp() {
-        this.reset();
-        this._timerGUI.startTimer();
-        this.update();
-
-    }
-    reset() {
-        this._timerGUI.resetTimer(this._maxTime);
-    }
-    resetFightRound() {
-        this._maxTime -= 500;
-        this._timerGUI.resetTimer(this._maxTime);
-    }
-    update() {
-
-    }
-}
-
-class InfoBarEnemyGridGUI {
-    
-    static readonly _divID: string = "FSInfoBarEnemyGrid";
-    private static _nrInstances: number = 0;
-    private static readonly _nrEnemyGridGUIs = 1;
-
-    static get fullPath(): string {
-        return InfoBarGUI.fullPath + ">#" + InfoBarEnemyGridGUI._divID;
-    }
-
-    private _div: HTMLElement;
-    private _enemyGrindGUIs: EnemyGridGUI[] = [];
-    private _timerGridGUI: EnemyGridTimerGridGUI;
-    constructor() {
-        if(InfoBarEnemyGridGUI._nrInstances > 0) {
-            throw "InfoBarEnemyGridGUI already has an instance running!";
-        }
-        InfoBarEnemyGridGUI._nrInstances += 1;
-        this._div = document.getElementById(InfoBarEnemyGridGUI._divID);
-        document.querySelectorAll(InfoBarEnemyGridGUI.fullPath + ">" + EnemyGridGUI._divClass).forEach(
-            (e) => this._enemyGrindGUIs.push(new EnemyGridGUI(e as HTMLElement))
+        //clear style
+        this._style.forEach(
+            (v, k) => this._div.style[k] = ""
         );
-        this._timerGridGUI = new EnemyGridTimerGridGUI();
-        this.update();
+        //clear innerHTML
+        this._div.innerHTML = "";
+        //hide
+        this._div.style.display = "none";
     }
-    update() {
-        this._enemyGrindGUIs.forEach((e, i) => {i < InfoBarEnemyGridGUI._nrEnemyGridGUIs ? e.show() : e.hide()});
-    }
-    resetTimer() {
-        this._timerGridGUI.reset();
-    }
-    resetFightRound() {
-        this._timerGridGUI.resetFightRound();
+    moveWithMouse(e: MouseEvent): void {
+        this._div.style.left = (e.pageX - DragAPI.dragOffsetX).toString() + "px";
+        this._div.style.top = (e.pageY - DragAPI.dragOffsetY).toString() + "px";
     }
 }
 
-class InfoBarPlayerInfoGUI {
-    
-    static readonly _divID: string = "FSInfOBarPlayerInfo";
-    private static _nrInstances: number = 0;
-
-    private _div: HTMLElement;
-    constructor() {
-        if(InfoBarPlayerInfoGUI._nrInstances > 0) {
-            throw "InfoBarPlayerInfoGUI already has an instance running!";
-        }
-        InfoBarPlayerInfoGUI._nrInstances += 1;
-        this._div = document.getElementById(InfoBarPlayerInfoGUI._divID);
-    }
-    resetFightRound() {
-        
-    }
-}
-
-class InfoBarGUI {
-    static readonly _divID: string = "FightScreenInfoBar";
-    private static _nrInstances: number = 0;
-
-    static get fullPath() {
-        return FightScreenGUI.fullPath + ">#" + InfoBarGUI._divID;
-    }
-
-    private _div: HTMLElement;
-    private _statusBarsGUI: InfoBarStatusBarsGUI;
-    private _enemyGridGUI: InfoBarEnemyGridGUI;
-    private _playerInfoGUI: InfoBarPlayerInfoGUI;
-    constructor() {
-        if(InfoBarGUI._nrInstances > 0) {
-            throw "InfoBarGUI already has an instance running!";
-        }
-        InfoBarGUI._nrInstances += 1;
-        this._div = document.getElementById(InfoBarGUI._divID);
-        this._statusBarsGUI = new InfoBarStatusBarsGUI();
-        this._enemyGridGUI = new InfoBarEnemyGridGUI();
-        this._playerInfoGUI = new InfoBarPlayerInfoGUI();
-    }
-    resetFightRound(): void {
-        this._statusBarsGUI.resetFightRound();
-        this._enemyGridGUI.resetFightRound();
-        this._playerInfoGUI.resetFightRound();
-    }
-}
-
-
-class FightScreenGUI {
-    static readonly _divID: string = "FightScreen";
+class DragAPI {
+    private static _body: HTMLElement = document.body;
     private static _dragging: boolean = false;
     private static _releasableDrag: boolean = null;
     private static _insideDragDestArea: boolean = null;
     private static _dragObjType: string = null;
-    private static _dragObj: DraggableGUI = null;
+    private static _dragObj: DragObejctGUI = new DragObejctGUI();
     private static _dragOffsetX: number;
     private static _dragOffsetY: number;
-    private static _self: FightScreenGUI;
 
-    static get fullPath(): string {
-        return "#" + FightScreenGUI._divID;
-    }
     static get dragging(): boolean {
         return this._dragging;
     }
@@ -892,16 +1180,21 @@ class FightScreenGUI {
     static get dragOffsetY(): number {
         return this._dragging ? this._dragOffsetY : null;
     }
-    static startDrag(dragObjectType: string, dragObject: DraggableGUI, dragObjectData: string, e: MouseEvent | DragEvent, releasableDrag: boolean = false): void {
+    static setUpDragObject(style: Map<string, string>, innerHTML: string) {
+        if(!this._dragging) {
+            this._dragObj.setStyle(style);
+            this._dragObj.setInnerHTML(innerHTML);
+        }
+    }
+    static startDrag(dragObjectType: string, dragObjectData: string, e: MouseEvent | DragEvent, releasableDrag: boolean = false): void {
         if(this._dragging == false) {
             this._dragging = true;
             this._releasableDrag = releasableDrag;
             this._insideDragDestArea = false;
             this._dragObjType = dragObjectType;
-            this._dragObj = dragObject;
             window.sessionStorage.setItem(dragObjectType, dragObjectData);
-            let leftObj: number = Number(dragObject.left.slice(0, -2));
-            let topObj: number = Number(dragObject.top.slice(0, -2));
+            let leftObj: number = Number(this._dragObj.left.slice(0, -2));
+            let topObj: number = Number(this._dragObj.top.slice(0, -2));
             this._dragOffsetX = e.pageX - leftObj;
             this._dragOffsetY = e.pageY - topObj;
         }
@@ -923,24 +1216,44 @@ class FightScreenGUI {
             this._releasableDrag = null;
             this._insideDragDestArea = null;
             this._dragObjType = null;
-            this._dragObj = null;
+            this._dragObj.reset();
         }
     }
+    static moveWithMouse(e: MouseEvent) {
+        this._dragObj.moveWithMouse(e);
+    }
+    static setUpEventListeners(): void {
+        DragAPI._body.addEventListener('mousemove', (e: MouseEvent) => DragAPI.onMouseMove(e))
+    }
+    private static onMouseMove(e: MouseEvent): void {
+        if(this.dragging) {
+            DragAPI._dragObj.moveWithMouse(e);
+        }
+    }
+}
 
+class FightScreenGUI {
+    static readonly _divID: string = "FightScreen";
+    
+    private static _self: FightScreenGUI;
+
+    static get fullPath(): string {
+        return "#" + FightScreenGUI._divID;
+    }
     static resetFightRound(): void {
         this._self.resetFightRound();
     }
 
     private _div: HTMLElement;
-    private _infoBarGUI: InfoBarGUI;
-    private _actionBarGUI: ActionBarGUI;
-    private _actoinPlanBarGUI: ActionPlanBarGUI;
+    private _infoBarGUI: InfoBarGUIs.InfoBarGUI;
+    private _actionBarGUI: ActionBarGUIs.ActionBarGUI;
+    private _actoinPlanBarGUI: ActionPlanBarGUIs.ActionPlanBarGUI;
     constructor() {
         FightScreenGUI._self = this;
         this._div = document.getElementById(FightScreenGUI._divID);
-        this._infoBarGUI = new InfoBarGUI();
-        this._actionBarGUI = new ActionBarGUI();
-        this._actoinPlanBarGUI = new ActionPlanBarGUI();
+        this._infoBarGUI = new InfoBarGUIs.InfoBarGUI();
+        this._actionBarGUI = new ActionBarGUIs.ActionBarGUI();
+        this._actoinPlanBarGUI = new ActionPlanBarGUIs.ActionPlanBarGUI();
         this.setUpEventListeners();
     }
     setUpEventListeners(): void {
@@ -948,8 +1261,8 @@ class FightScreenGUI {
         this._div.addEventListener('mousemove', (e: MouseEvent) => c_obj.onMouseMove(e, c_obj))
     }
     private onMouseMove(e: MouseEvent, c_obj: FightScreenGUI): void {
-        if(FightScreenGUI.dragging) {
-            FightScreenGUI._dragObj.moveWithMouse(e);
+        if(DragAPI.dragging) {
+            DragAPI.moveWithMouse(e);
         }
     }
     private resetFightRound(): void {
@@ -958,4 +1271,5 @@ class FightScreenGUI {
     }
 }
 
+DragAPI.setUpEventListeners();
 let FSGUI: FightScreenGUI = new FightScreenGUI();

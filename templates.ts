@@ -61,4 +61,76 @@ namespace ClassTemplates {
 
         }
     }
+    interface ListGUIStoredType{};
+    class ListElementGUI {
+        private _element: ListGUIStoredType;
+        private _div: HTMLElement;
+        constructor(div: HTMLElement) {
+            this._div = div;
+        }
+        get element(): ListGUIStoredType {
+            return this._element;
+        }
+        set element(elem: ListGUIStoredType) {
+            this._element = elem;
+            this._div.innerHTML = this.repr();
+        }
+        repr(): string {
+            return "";
+        }
+    }
+
+    class ListGUI {
+        private _listElements: ListElementGUI[] = [];
+        private _elements: ListGUIStoredType[] = [];
+        private _currentPage: number;
+        private _div: HTMLElement;
+
+
+        constructor(div: HTMLElement, elementsPerPage: number) {
+            this._div = div;
+            this.elementsPerPage = elementsPerPage;
+        }
+        set elementsPerPage(nr: number) {
+            if(nr != this._listElements.length) {
+                while(this._listElements.length < nr) {
+                    let newDiv: HTMLElement = document.createElement('div') as HTMLElement;
+                    this._div.appendChild(newDiv);
+                    this._listElements.push(new ListElementGUI(newDiv));
+                }
+                while(this._listElements.length > nr) {
+                    this._listElements.pop();
+                }
+                this.update;
+            }
+        }
+        get elementsPerPage() {
+            return this._listElements.length;
+        }
+        get currentPage() {
+            return this._currentPage;
+        }
+        get nrPages() {
+            return Math.ceil(this._elements.length / this.elementsPerPage);
+        }
+        
+        nextPage(): void {
+            if(this.currentPage < this.nrPages) {
+                this._currentPage++;
+            }
+        }
+        getElementOnCurrentPage(i: number): ListGUIStoredType {
+            let ind: number = this._currentPage * this._listElements.length + i;
+            if(i > this.elementsPerPage || ind >= this._elements.length) {
+                throw "ListGUI ERROR: Element requested not in list!";
+            }
+            return this._elements[ind];
+        }
+        addToEnd(elem: ListGUIStoredType) {
+            this._elements.push(elem);
+        }
+        update() {
+
+        }
+    }
 }

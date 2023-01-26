@@ -1,0 +1,4 @@
+For the getComputedStyle() parts, save the data somewhere.
+Store some stuff from CSS into a global JS class (like save separators for levels).
+Go on to create the structure of the HTML file with JS calls.
+Remove . from ".<class_name>" on static _divClass fields and compensate for it.
