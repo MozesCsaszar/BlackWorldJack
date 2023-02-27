@@ -14,9 +14,187 @@ namespace StringUtil {
     }
 }
 
+/*                                      Storage namespaces */
+
+class ElementalAttributes {
+    fire: Number;
+    water: Number;
+    earth: Number;
+    wind: Number;
+    physical: Number;
+
+    constructor(physical: Number = 0, fire: Number = 0, water: Number = 0, earth: Number = 0, wind: Number = 0) {
+        this.physical = physical;
+        this.fire = fire;
+        this.water = water;
+        this.earth = earth;
+        this.wind = wind;
+    }
+
+    copy() {
+        return new ElementalAttributes(this.physical, this.fire, this.water, this.earth, this.water);
+    }
+}
+
+namespace Enemy {
+    enum Modifier {
+
+    }
+
+    class Scaling {
+        copy(): Scaling {
+            return new Scaling();
+        }
+    }
+
+    class EnemyStats {
+        private _health: Number;
+        private _defense: ElementalAttributes;
+        private _attack: ElementalAttributes;
+        private _resistance: ElementalAttributes;
+
+        constructor(health: Number, defense: ElementalAttributes,  attack: ElementalAttributes, resistance: ElementalAttributes) {
+            this._health = health;
+            this._defense = defense;
+            this._attack = attack;
+            this._resistance = resistance;
+        }
+
+        copy(): EnemyStats {
+            return new EnemyStats(this._health, this._defense.copy(), this._attack.copy(), this._resistance.copy());
+        }
+    }
+
+    class EnemyBody {
+        private _attributes: EnemyStats;
+        private _modifiers: Modifier[] = [];
+
+        constructor(attributes: EnemyStats, modifiers: Modifier[]) {
+            this._attributes = attributes.copy();
+            modifiers.forEach( e => this._modifiers.push(e) );
+        }
+        
+        copy(): EnemyBody {
+            return new EnemyBody(this._attributes, this._modifiers);
+        }
+    }
+
+    class EnemyInfo {
+        name: string;
+        desc: string;
+        constructor(name: string, desc: string) {
+            this.name = name;
+            this.desc = desc;
+        }
+    }
+
+    export class EnemyWithLevel {
+        private _body: EnemyBody;
+        //private _elitenessModifiers: EnemyBody[] = [];
+        private _level: number;
+        private _info: EnemyInfo;
+        constructor(body: EnemyBody, level: number) {
+            this._body = body.copy(); 
+            this._level = level;
+        }
+        get level(): number { 
+            return this._level; 
+        }
+        get name(): string {
+            return this._info.name;
+        }
+        get desc(): string {
+            return this._info.desc;
+        }
+        copy(): EnemyWithLevel {
+            let e: EnemyWithLevel = new EnemyWithLevel(this._body.copy(), this._level);
+            return e;
+        }
+        setEnemyInfo(info: EnemyInfo) {
+            this._info = info;
+        }
+    }
+    
+    export class Enemy {
+        static copy(enemy: Enemy) {
+            return enemy.copy();
+        }
+        private _name: string;
+        private _desc: string;
+
+        private _levels: Map<number, EnemyWithLevel> = new Map<number, EnemyWithLevel>();
+        private _scaling: Scaling;
+    
+        constructor(name: string, desc: string, levels: Map<number, EnemyWithLevel>, scaling: Scaling = undefined) {
+            this._name = name;
+            this._desc = desc;
+            levels.forEach( (e, k) => { e.setEnemyInfo(this.getInfo()); this._levels.set(k, e.copy()); } );
+            this._scaling = scaling == undefined ? undefined : scaling.copy();
+        }
+        copy(): Enemy {
+            let e: Enemy = new Enemy(this._name, this._desc, this._levels, this._scaling == undefined ? undefined : this._scaling.copy());
+            return e;
+        }
+        getEnemyWithLevel(level: number): EnemyWithLevel {
+            if(level >= 1) {
+                if(this._levels.get(level) != undefined) {
+                    return this._levels.get(level).copy();
+                }
+                /*Cases:
+                    I:      There is an enemy with lower level and scaling     -> Scale enemy from lower level
+                    II:     There is an enemy with higher level and no scaling -> Get enemy from higher level
+                    III:    There is no enemy with higher level and no scaling -> Throw error
+                */
+                let tempLevels: number[] = [];
+                for(const level of this._levels.keys()) {
+                        tempLevels.push(level);
+                }
+                tempLevels = tempLevels.sort();
+                if(this._scaling != undefined) {
+                    console.log("SCALED");
+                    return this._levels.get(0).copy();
+                }
+                else {
+                    let higher: number = undefined;
+                    tempLevels.forEach(
+                        e => {
+                            if(e > level) {
+                                if(higher == undefined) {
+                                    higher = e;
+                                }
+                            }
+                        }
+                    );
+                    if(higher == undefined) {
+                        throw "ERROR: No higher level enemy to initialize this one!";
+                    }
+                    else {
+                        return this._levels.get(higher).copy();
+                    }
+                }
+            }
+            else {
+                throw "ERROR: Cannot copy Enemy with level < 1";
+            }
+        }
+        getInfo(): EnemyInfo {
+            return new EnemyInfo(this._name, this._desc);
+        }
+    }
+
+    export let enemies = {
+        'Goblin': new Enemy('Goblin', 'Stinky and foul looking, these creatures are not the bestest fighters.', new Map<number, EnemyWithLevel>(
+            [
+                [1, new EnemyWithLevel(new EnemyBody(new EnemyStats(10, new ElementalAttributes(), new ElementalAttributes(3), new ElementalAttributes()), []), 1)]
+            ])),
+        
+    };
+}
+
 /*                                      Underlying Classes */
 
-enum ManaTypes {
+
+enum CardManaTypes {
     neutral,
     fire,
     earth,
@@ -31,14 +209,14 @@ class Card {
         let s_a: string[] = s.split(sep);
         let suit: string = s_a[i]; i++;
         let value: string = s_a[i]; i++;
-        let manaType: ManaTypes = ManaTypes[s_a[i]]; i++;
+        let manaType: CardManaTypes = CardManaTypes[s_a[i]]; i++;
         return new Card(suit, value, manaType);
     }
 
     private _suit: string;
     private _value: string;
-    private _manaType: ManaTypes;
-    constructor(suit: string, value: string, mana: ManaTypes = ManaTypes.neutral) {
+    private _manaType: CardManaTypes;
+    constructor(suit: string, value: string, mana: CardManaTypes = CardManaTypes.neutral) {
         this._suit = suit;
         this._manaType = mana;
         this._value = value;
@@ -49,7 +227,7 @@ class Card {
     get value():string {
         return this._value;
     }
-    get manaType():ManaTypes {
+    get manaType():CardManaTypes {
         return this._manaType;
     }
     get copy():Card {
@@ -68,7 +246,7 @@ class Card {
         let s_a: string[] = s.split(sep);
         this._suit = s_a[i]; i++;
         this._value = s_a[i]; i++;
-        this._manaType = ManaTypes[s_a[i]]; i++;
+        this._manaType = CardManaTypes[s_a[i]]; i++;
     }
 }
 
@@ -108,7 +286,7 @@ class Deck {
         });
         this.afterDeckRepopulation();
     }
-    setContentSuitsValuesMana(suits: string[], values: string[], manaType: ManaTypes = ManaTypes.neutral): void {
+    setContentSuitsValuesMana(suits: string[], values: string[], manaType: CardManaTypes = CardManaTypes.neutral): void {
         this.reset();
         suits.forEach(s => {
             values.forEach(v => {
@@ -175,7 +353,9 @@ class Hand {
     }
     addCard(card: Card): void {
         //add a new card to the hand; card not copied
-        this._cards.push(card);
+        if(card != null) {
+            this._cards.push(card);
+        }
     }
     popCard(): void {
         this._cards.pop();
@@ -184,6 +364,8 @@ class Hand {
         this._cards = [];
     }
 }
+
+
 
 class Player {
     private _nrActions: number = 2;
@@ -217,6 +399,33 @@ class Action {
         let i: number = 0;
         let s_list = save.split("\\e\\");
         this._name = s_list[i]; i++;
+    }
+}
+
+class FightInstance {
+    private _enemies: Enemy.EnemyWithLevel[] = [];
+
+    get enemies(): readonly Enemy.EnemyWithLevel[] {
+        return this._enemies;
+    }
+
+    addEnemy(e: Enemy.EnemyWithLevel) {
+        this._enemies.push(e);
+    }
+}
+
+class Fight {
+    private _enemies: string[] = [];
+
+    constructor(enemyNames: string[]) {
+        enemyNames.forEach(e => this._enemies.push(e));
+    }
+    createFightInstance(level: number): FightInstance {
+        let fightInstance = new FightInstance();
+        this._enemies.forEach(
+            e => fightInstance.addEnemy(GameController.getEnemyByName(e).getEnemyWithLevel(level))
+        )
+        return fightInstance;
     }
 }
 
@@ -278,11 +487,13 @@ namespace ActionPlanBarGUIs {
         private _cardGUIs: CardGUI[] = [];
         private _div: HTMLElement;
         private _hand: Hand;
+        private _tempHand: Hand;
         constructor(super_path:string) {
             let path: string = super_path + ">" + HandGUI._divClass;
             this._div = document.querySelector(path);
             document.querySelectorAll(path + ">" + CardGUI._divClass).forEach(e => this._cardGUIs.push(new CardGUI(e as HTMLElement)));
             this._hand = new Hand();
+            this._tempHand = new Hand();
             this.stylizeDeck();
         }
         get value(): number {
@@ -294,25 +505,32 @@ namespace ActionPlanBarGUIs {
         get final(): boolean {
             return this.busted || this._hand.final;
         }
-        update(): void {
-            this._cardGUIs.forEach((e, i) => e.card = this._hand.get(i));
+        get tempValue(): number {
+            return this._tempHand.value;
         }
-        addCard(card: Card): void {
-            this._cardGUIs[this._hand.length].card = card;
+        get tempBusted(): boolean {
+            return this._tempHand.busted;
+        }
+        get tempFinal(): boolean {
+            return this._tempHand.final;
+        }
+        update(): void {
+            this._cardGUIs.forEach((e, i) => e.card = this._tempHand.get(i));
         }
         addTempCard(card: Card): void {
-            //visual and deck changes
-            this._cardGUIs[this._hand.length].card = card;
-            this._cardGUIs[this._hand.length].setAsTemp();
-            this._hand.addCard(card);
+            //visual changes only; change temp hand only
+            this._cardGUIs[this._tempHand.length].card = card;
+            this._cardGUIs[this._tempHand.length].setAsTemp();
+            this._tempHand.addCard(card);
         }
         finalizeTempCard(): void {
-            //visual changes only
-            this._cardGUIs[this._hand.length - 1].setAsPerm();        
+            //visual and actual deck changes changes only
+            this._cardGUIs[this._tempHand.length - 1].setAsPerm();
+            this._hand.addCard(this._cardGUIs[this._tempHand.length - 1].card);
         }
         removeTempCard(): void {
-            this._cardGUIs[this._hand.length - 1].card = null;
-            this._hand.popCard();
+            this._cardGUIs[this._tempHand.length - 1].card = null;
+            this._tempHand.popCard();
         }
         stylizeDeck(): void {
             this._cardGUIs.forEach((e: CardGUI, i: number) => {
@@ -321,19 +539,61 @@ namespace ActionPlanBarGUIs {
         }
         resetFightRound(): void {
             this._hand.reset();
+            this._tempHand.reset();
             this.update();
         }
     }
-    
+
     class ActionGUI {
+        static readonly _divClass: string = ".action";
+
+        private _div: HTMLElement;
+        private _action: Action = null;
+        private _tempAction: Action = null;
+        get action(): Action {
+            return this._action;
+        }
+        set action(action: Action) {
+            this._action = action;
+            this.update();
+        }
+        set tempAction(action: Action) {
+            this._tempAction = action;
+            this.update(true);
+        }
+        removeTemp(): void {
+            this._tempAction = null;
+            this.update();
+        }
+        finalizeTemp(): void {
+            this.action = this._tempAction;
+        }
+        constructor(path: string) {
+            this._div = document.querySelector(path + ">" + ActionGUI._divClass) as HTMLElement;
+            this._action = null;
+        }
+        update(basedOnTemp = false): void {
+            let a: Action = basedOnTemp ? this._tempAction : this._action;
+            if(a == null) {
+                this._div.innerHTML = "";
+            }
+            else {
+                this._div.innerHTML = a.name;
+            }
+        }
+    }
+    
+    class ActionSpaceGUI {
         static readonly _divClass: string = ".action_card_space";
     
         private _entered: boolean = false;
+        private _actionGUI: ActionGUI;
         private _handGUI: HandGUI;
         private _div: HTMLElement;
         constructor(nr: string) {
-            this._handGUI = new HandGUI(ActionGUI._divClass + "._" + nr);
-            this._div = document.querySelector(ActionGUI._divClass + "._" + nr) as HTMLElement;
+            this._handGUI = new HandGUI(ActionSpaceGUI._divClass + "._" + nr);
+            this._actionGUI = new ActionGUI(ActionSpaceGUI._divClass + "._" + nr);
+            this._div = document.querySelector(ActionSpaceGUI._divClass + "._" + nr) as HTMLElement;
             this.setUpEventListeners();
             this.update();
         }
@@ -343,42 +603,52 @@ namespace ActionPlanBarGUIs {
         get final(): boolean {
             return this.busted || this._handGUI.final;
         }
-    
         setUpEventListeners() {
-            let c_obj: ActionGUI = this;
+            let c_obj: ActionSpaceGUI = this;
             c_obj._div.addEventListener('mouseenter', (e: MouseEvent) => c_obj.onMouseEnter(e, c_obj));
             c_obj._div.addEventListener('mouseleave', (e: MouseEvent) => c_obj.onMouseLeave(e, c_obj));
             c_obj._div.addEventListener('mouseup', (e: MouseEvent) => c_obj.onMouseUp(e, c_obj));
         }
-        onMouseEnter(e: MouseEvent, c_obj: ActionGUI) {
-            if(DragAPI.dragObjectType == DragCardGUI._dragObjType && ! c_obj._handGUI.busted) {
+        onMouseEnter(e: MouseEvent, c_obj: ActionSpaceGUI) {
+            if(DragAPI.dragObjectType == DeckGUI._dragObjType && ! c_obj._handGUI.busted) {
                 c_obj._handGUI.addTempCard(Card.load(DragAPI.dragObjectData));
                 c_obj.update();
-                c_obj._entered = true;
                 DragAPI.enterDragDestinationArea();
-    
             }
+            else if(DragAPI.dragObjectType == ActionBarGUIs.ActionListElementGUI._dragObjType) {
+                c_obj._actionGUI.tempAction = Action.load(DragAPI.dragObjectData);
+                DragAPI.enterDragDestinationArea();
+            }
+            
         }
-        onMouseLeave(e: MouseEvent, c_obj: ActionGUI) {
-            if(DragAPI.dragObjectType == DragCardGUI._dragObjType && c_obj._entered) {
+        onMouseLeave(e: MouseEvent, c_obj: ActionSpaceGUI) {
+            if(DragAPI.dragObjectType == DeckGUI._dragObjType && DragAPI.insideDragDestinationArea) {
                 c_obj._handGUI.removeTempCard();
                 c_obj.update();
-                c_obj._entered = false;
                 DragAPI.exitDragDestinationArea();
             }
+            else if(DragAPI.dragObjectType == ActionBarGUIs.ActionListElementGUI._dragObjType  && DragAPI.insideDragDestinationArea) {
+                c_obj._actionGUI.removeTemp();
+                DragAPI.exitDragDestinationArea();
+            }
+            
         }
-        onMouseUp(e: MouseEvent, c_obj: ActionGUI) {
-            if(DragAPI.dragObjectType == DragCardGUI._dragObjType) {
+        onMouseUp(e: MouseEvent, c_obj: ActionSpaceGUI) {
+            if(DragAPI.canDropHere(DeckGUI._dragObjType) && !this._handGUI.busted) {
                 c_obj._handGUI.finalizeTempCard();
                 ActionHolderGUI.setFinalAll();
                 c_obj._entered = false;
                 DragAPI.endDrag();
-                DeckGUI.resetDragCard();
+            }
+            else if(DragAPI.canDropHere(ActionBarGUIs.ActionListElementGUI._dragObjType)) {
+                c_obj._actionGUI.finalizeTemp();
+                DragAPI.endDrag();
             }
         }
         update(): void {
             this._handGUI.update();
-            let value = this._handGUI.value;
+            this._actionGUI.update();
+            let value = this._handGUI.tempValue;
             if(value < 14) {
                 this._div.style.border = 'dashed red 5px';
             }
@@ -398,82 +668,16 @@ namespace ActionPlanBarGUIs {
         hide(): void {
             this._div.style.display = "none";
         }
-        addCard(card: Card): void {
-            this._handGUI.addCard(card);
-        }
         resetFightRound(): void {
             this._handGUI.resetFightRound();
             this.update();
-        }
-    
-    }
-    
-    class DragCardGUI extends DraggableGUI {
-        static readonly _divID: string = "#FSActionPlanBarDragCard";
-        static readonly _dragObjType: string = 'card';
-        private _card: Card;
-        private _div: HTMLElement;
-        constructor(div: HTMLElement, card: Card = null) {
-            super();
-            this._card = card;
-            this._div = div;
-        }
-        get card(): Card {
-            return this._card;
-        }
-        set card(card: Card) {
-            this._card = card;
-            this.initialUpdate();
-        }
-        get left(): string {
-            return this._div.style.left;
-        }
-        get top(): string {
-            return this._div.style.top;
-        }
-        initialUpdate(): void {
-            if(this.card == null) {
-                this._div.style.display = 'none';
-            }
-            else {
-                this._div.style.display = 'block';
-                this._div.innerHTML = this.card.value + "<br>" + this.card.suit;
-            }
-            
-        }
-        setPosition(x: number, y: number, adjust_y: boolean = true): void {
-            let width: number = Number(getComputedStyle(this._div).getPropertyValue("--FSAPB-card-width").slice(0, -2));
-            let height: number = Number(getComputedStyle(this._div).getPropertyValue("--FSAPB-card-height").slice(0, -2));
-            this._div.style.left = (x ).toString() + "px";
-            if(adjust_y) {
-                this._div.style.top = (y - height/2).toString() + "px";
-            }
-            else {
-                this._div.style.top = (y).toString() + "px";
-            }
-            
-        }
-        setOpacity(op: number): void {
-            this._div.style.opacity = op.toString();
-        }
-        reset(): void {
-            this._div.textContent = "";
-            this.card = null;
-        }
-        moveWithMouse(e: MouseEvent): void {
-            this._div.style.left = (e.pageX - DragAPI.dragOffsetX).toString() + "px";
-            this._div.style.top = (e.pageY - DragAPI.dragOffsetY).toString() + "px";
         }
     }
     
     class DeckGUI {
         static readonly _divClass: string = ".deck";
-        static readonly _dragProperties: string[] = ['width', 'height', 'border', 'backgroundColor'];
-        private static _dragCardGUI: DragCardGUI = new DragCardGUI(document.getElementById('FSActionPlanBarDragCard'));
-    
-        static resetDragCard(): void {
-            DeckGUI._dragCardGUI.reset();
-        }
+        static readonly _dragObjType: string = 'card';
+        static readonly _dragProperties: string[] = ['width', 'height', 'border', 'backgroundColor'];    
     
         private _div: HTMLElement;
         private _deck: Deck;
@@ -482,7 +686,7 @@ namespace ActionPlanBarGUIs {
             this._deck = new Deck();
             this.setUpEventListeners();
         }
-        setContentSuitsValuesMana(suits: string[], values: string[], manaType: ManaTypes = ManaTypes.neutral): void {
+        setContentSuitsValuesMana(suits: string[], values: string[], manaType: CardManaTypes = CardManaTypes.neutral): void {
             this._deck.setContentSuitsValuesMana(suits, values, manaType);
         }
         setUpEventListeners(): void {
@@ -490,19 +694,21 @@ namespace ActionPlanBarGUIs {
             this._div.addEventListener("mousedown", (e: MouseEvent) => c_obj.onMouseDown(e, c_obj));
         }
         onMouseDown(e: MouseEvent, c_obj: DeckGUI): void {
-            if(!ActionPlanBarGUI._finalAll && !DragAPI.dragging) {
-                let left: number = c_obj._div.getBoundingClientRect().left - 6;
-                let top: number = c_obj._div.getBoundingClientRect().top - 52;
-                let c: Card = c_obj._deck.draw();
-                this.setUpDragObject(left, top, c);
-                DragAPI.startDrag(DragCardGUI._dragObjType, c.save(), e);
+            if(DragAPI.canStartDrag()) {
+                if(!ActionPlanBarGUI._finalAll) {
+                    let left: number = c_obj._div.getBoundingClientRect().left - 6;
+                    let top: number = c_obj._div.getBoundingClientRect().top - 52;
+                    let c: Card = c_obj._deck.draw();
+                    this.setUpDragObject(left, top, c);
+                    DragAPI.startDrag(DeckGUI._dragObjType, c.save(), e);
+                }
             }
         }
         setUpDragObject(left: number, top: number, card: Card): void {
             let styleSheet = getComputedStyle(this._div);
             let styleNeeded = new Map<string, string>();
             DeckGUI._dragProperties.forEach(
-                (e) => {styleNeeded.set(e, styleSheet[e])}
+                (e) => {styleNeeded.set(DragAPI.dragPropertyToCSS(e), styleSheet[e])}
             )
             styleNeeded.set('left', left + "px");
             styleNeeded.set('top', top + "px");
@@ -552,12 +758,12 @@ namespace ActionPlanBarGUIs {
     class ActionHolderGUI {
     
         private static _currentActionGUIs: number = 7;
-        private static _actionGUIs: ActionGUI[] = [];
+        private static _actionGUIs: ActionSpaceGUI[] = [];
     
         constructor(superDivID: string) {
             //set up deck GUI's
-            document.querySelectorAll(superDivID + '>' + ActionGUI._divClass).forEach(
-                (e: Element, i: number) => {ActionHolderGUI._actionGUIs.push(new ActionGUI(i.toString()));}
+            document.querySelectorAll(superDivID + '>' + ActionSpaceGUI._divClass).forEach(
+                (e: Element, i: number) => {ActionHolderGUI._actionGUIs.push(new ActionSpaceGUI(i.toString()));}
             );
             this.update();
         }
@@ -576,12 +782,12 @@ namespace ActionPlanBarGUIs {
         }
         update(): void {
             ActionHolderGUI._actionGUIs.forEach(
-                (e:ActionGUI, i:number) => {i < ActionHolderGUI._currentActionGUIs ? e.show() : e.hide();}
+                (e:ActionSpaceGUI, i:number) => {i < ActionHolderGUI._currentActionGUIs ? e.show() : e.hide();}
             );
         }
         resetFightRound(): void {
             ActionHolderGUI._actionGUIs.forEach(
-                (e:ActionGUI, i:number) => {
+                (e:ActionSpaceGUI, i:number) => {
                     if(i < ActionHolderGUI._currentActionGUIs) { e.resetFightRound(); };
                 }
             );
@@ -626,10 +832,14 @@ namespace ActionBarGUIs {
             this._div.addEventListener('mouseleave', (e: MouseEvent) => c_obj.onMouseLeave(e, c_obj));
         }
         onMouseEnter(e: MouseEvent, c_obj: AreaGridCellGUI) {
-            c_obj._div.style.backgroundColor = 'rgb(0,0,255)';
+            if(!DragAPI.dragging) {
+                c_obj._div.style.backgroundColor = 'rgb(0,0,255)';
+            }
         }
         onMouseLeave(e: MouseEvent, c_obj: AreaGridCellGUI) {
-            c_obj._div.style.backgroundColor = 'rgb(0,0,0)';
+            if(!DragAPI.dragging) {
+                c_obj._div.style.backgroundColor = 'rgb(0,0,0)';
+            }
         }
     }
     
@@ -673,58 +883,10 @@ namespace ActionBarGUIs {
         }
     }
 
-    class DragActionGUI {
-        static readonly _dragObjType: string = "action";
-        static readonly _divID: string = "FSActoinBarDragAction";
-
-        private _div: HTMLElement;
-        private _action: Action = null;
-        get left(): string { return this._div.style.left }
-        get top(): string { return this._div.style.top }
-        constructor() {
-            this._div = document.getElementById(DragActionGUI._divID);
-        }
-        set action(a: Action) {
-            this._action = a;
-            if(a == null) {
-                this._div.style.display = 'none';
-            }
-            else  {
-                this._div.style.display = 'flex';
-                this._div.innerHTML = a.name;
-            }
-        }
-        get action(): Action {
-            return this._action;
-        }
-        setPosition(x: number, y: number, adjust_y: boolean = true): void {
-            let width: number = Number(getComputedStyle(this._div).getPropertyValue("width").slice(0, -2));
-            let height: number = Number(getComputedStyle(this._div).getPropertyValue('height').slice(0, -2));
-            this._div.style.left = (x ).toString() + "px";
-            if(adjust_y) {
-                this._div.style.top = (y - height).toString() + "px";
-            }
-            else {
-                this._div.style.top = (y).toString() + "px";
-            }
-        }
-        setOpacity(op: number): void {
-            this._div.style.opacity = op.toString();
-        }
-        reset(): void {
-            this._div.textContent = "";
-            this.action = null;
-        }
-        moveWithMouse(e: MouseEvent): void {
-            this._div.style.left = (e.pageX - DragAPI.dragOffsetX).toString() + "px";
-            this._div.style.top = (e.pageY - DragAPI.dragOffsetY).toString() + "px";
-        }
-    }
-
-    class ActionListElementGUI {
+    export class ActionListElementGUI {
         static readonly _elementClass: string = ".action_list_element";
+        static readonly _dragObjType: string = "action";
         static readonly _dragProperties: string[] = ['width', 'height', 'border', 'backgroundColor', 'display'];
-        static _dragActionGUI: DragActionGUI = new DragActionGUI();
         private _action: Action;
         private _div: HTMLElement;
         get action(): Action {
@@ -756,14 +918,14 @@ namespace ActionBarGUIs {
                 let left: number = c_obj._div.getBoundingClientRect().left - 8;
                 let top: number = c_obj._div.getBoundingClientRect().top - 52;
                 c_obj.setUpDragObject(left, top);
-                DragAPI.startDrag(DragActionGUI._dragObjType, c_obj.action.save(), e);
+                DragAPI.startDrag(ActionListElementGUI._dragObjType, c_obj.action.save(), e);
             }
         }
         setUpDragObject(left: number, top: number): void {
             let styleSheet = getComputedStyle(this._div);
             let styleNeeded = new Map<string, string>();
             ActionListElementGUI._dragProperties.forEach(
-                (e) => {styleNeeded.set(e, styleSheet[e])}
+                (e) => {styleNeeded.set(DragAPI.dragPropertyToCSS(e), styleSheet[e])}
             )
             styleNeeded.set('left', left + "px");
             styleNeeded.set('top', top + "px");
@@ -901,17 +1063,52 @@ namespace InfoBarGUIs {
         private static _divDisplay: string = null;
     
         private _div: HTMLElement;
-        constructor(div: HTMLElement) {
+        private _enemy: Enemy.EnemyWithLevel;
+        private _number: HTMLElement;
+        private _name: HTMLElement;
+        private _desc: HTMLElement;
+        private _mods: HTMLElement;
+        private _symbol: string;
+        constructor(div: HTMLElement, symbol: string) {
             this._div = div;
             if(EnemyGridGUI._divDisplay == null) {
                 EnemyGridGUI._divDisplay = this._div.style.display;
             }
+            this._number = this._div.childNodes[1].childNodes[1] as HTMLElement;
+            this._number.innerHTML = symbol;
+            this._name = this._div.childNodes[1].childNodes[3] as HTMLElement;
+            this._desc = this._div.childNodes[3] as HTMLElement;
+            this._mods = this._div.childNodes[5] as HTMLElement;
+            this._symbol = symbol;
+        }
+        setEnemy(enemy: Enemy.EnemyWithLevel) {
+            this._enemy = enemy;
+            if(enemy == undefined) {
+                this.hide();
+            }
+            else {
+                this.show();
+            }
         }
         show() {
+            this.update();
             this._div.style.display = EnemyGridGUI._divDisplay;
         }
         hide() {
+            this.update();
             this._div.style.display = 'none';
+        }
+        update() {
+            if(this._enemy == undefined) {
+                this._name.innerHTML = "";
+                this._desc.innerHTML = "";
+                this._mods.innerHTML = "";
+            }
+            else {
+                this._name.innerHTML = this._enemy.name;
+                this._desc.innerHTML = this._enemy.desc;
+                this._mods.innerHTML = "";
+            }
         }
     }
     
@@ -1031,7 +1228,7 @@ namespace InfoBarGUIs {
             InfoBarEnemyGridGUI._nrInstances += 1;
             this._div = document.getElementById(InfoBarEnemyGridGUI._divID);
             document.querySelectorAll(InfoBarEnemyGridGUI.fullPath + ">" + EnemyGridGUI._divClass).forEach(
-                (e) => this._enemyGrindGUIs.push(new EnemyGridGUI(e as HTMLElement))
+                (e, i) => this._enemyGrindGUIs.push(new EnemyGridGUI(e as HTMLElement, String(i + 1)))
             );
             this._timerGridGUI = new EnemyGridTimerGridGUI();
             this.update();
@@ -1091,6 +1288,9 @@ namespace InfoBarGUIs {
             this._statusBarsGUI.resetFightRound();
             this._enemyGridGUI.resetFightRound();
             this._playerInfoGUI.resetFightRound();
+        }
+        setUpEnemiesGUI(fightInstance: FightInstance): void {
+            
         }
     }
 }
@@ -1161,6 +1361,43 @@ class DragAPI {
     private static _dragObj: DragObejctGUI = new DragObejctGUI();
     private static _dragOffsetX: number;
     private static _dragOffsetY: number;
+
+    static dragPropertyToCSS(property: string): string {
+        let ret: string = "";
+        for(let i = 0; i < property.length; i++) {
+            if(property[i].toLowerCase() == property[i]) {
+                ret += property[i];
+            }
+            else {
+                ret += "-" + property[i].toLowerCase();
+            }
+        }
+        return ret;
+    }
+    static canDropHere(dragObjType:string): boolean {
+        if(this._dragging) {
+            if(this._releasableDrag) {
+                return true;
+            }
+            else {
+                return this._insideDragDestArea && this._dragObjType == dragObjType;
+            }
+            
+        }
+        return false;
+    }
+    static canStartDrag(): boolean {
+        if(!this._dragging) {
+            return true;
+        }
+        return false;
+    }
+    static canMouseDownHere(): boolean {
+        if(this._dragging && !this._insideDragDestArea) {
+            return false;
+        }
+        return true;
+    }
 
     static get dragging(): boolean {
         return this._dragging;
@@ -1260,6 +1497,9 @@ class FightScreenGUI {
         let c_obj: FightScreenGUI = this;
         this._div.addEventListener('mousemove', (e: MouseEvent) => c_obj.onMouseMove(e, c_obj))
     }
+    setUpFight(fightInstance: FightInstance) {
+
+    }
     private onMouseMove(e: MouseEvent, c_obj: FightScreenGUI): void {
         if(DragAPI.dragging) {
             DragAPI.moveWithMouse(e);
@@ -1271,5 +1511,47 @@ class FightScreenGUI {
     }
 }
 
-DragAPI.setUpEventListeners();
-let FSGUI: FightScreenGUI = new FightScreenGUI();
+class FightScreenController {
+    static _fightScreenGUI: FightScreenGUI;
+    private static _initialized: boolean = false;
+    private static _fightInstance: FightInstance = undefined;
+    static init(): void {
+        if(this._initialized) {
+            throw "ERROR: FightScreenController can only be initialized once!";
+        }
+        this._initialized = true;
+        this._fightScreenGUI = new FightScreenGUI();
+    }
+    static startFight(fightInstance: FightInstance): void {
+        this._fightInstance = fightInstance;
+        this._fightScreenGUI.setUpFight(this._fightInstance);
+    }
+}
+
+class GameController {
+    private static _initialized: boolean = false;
+    private static _enemies: Map<string, Enemy.Enemy> = new Map<string, Enemy.Enemy>();
+
+    static getEnemyByName(name: string): Enemy.Enemy {
+        return Enemy.enemies[name];
+    }
+
+    private static initAPIs() {
+        DragAPI.setUpEventListeners();
+    }
+    private static initControllers() {
+        FightScreenController.init();
+    }
+    static init() {
+        if(this._initialized) {
+            throw "ERROR: GameController can only be initialized once!";
+        }
+        this.initAPIs();
+        this.initControllers();
+    }}
+
+GameController.init();
+
+let f = new Fight(['Goblin']);
+let fI = f.createFightInstance(1);
+FightScreenController.startFight(fI);
