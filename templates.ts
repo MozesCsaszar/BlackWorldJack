@@ -53,7 +53,7 @@ namespace ClassTemplates {
         constructor() {
             this.setUpEventListeners();
         }
-        setUpEventListeners() {
+        private setUpEventListeners() {
             let c_obj: InteractiveGUI = this;
             c_obj._div.addEventListener('mousedown', (e: MouseEvent) => this.onMouseDown(e, c_obj));
         }

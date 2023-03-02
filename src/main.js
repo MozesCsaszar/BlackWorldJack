@@ -80,12 +80,19 @@ var Enemy;
         get desc() {
             return this._info.desc;
         }
+        get symbol() {
+            return this._symbol;
+        }
+        set enemyInfo(info) {
+            this._info = info;
+        }
+        set symbol(sym) {
+            this._symbol = sym;
+        }
         copy() {
             let e = new EnemyWithLevel(this._body.copy(), this._level);
+            e.enemyInfo = this._info;
             return e;
-        }
-        setEnemyInfo(info) {
-            this._info = info;
         }
     }
     Enemy_1.EnemyWithLevel = EnemyWithLevel;
@@ -97,7 +104,7 @@ var Enemy;
             this._levels = new Map();
             this._name = name;
             this._desc = desc;
-            levels.forEach((e, k) => { e.setEnemyInfo(this.getInfo()); this._levels.set(k, e.copy()); });
+            levels.forEach((e, k) => { e.enemyInfo = this.getInfo(); this._levels.set(k, e.copy()); });
             this._scaling = scaling == undefined ? undefined : scaling.copy();
         }
         copy() {
@@ -109,34 +116,36 @@ var Enemy;
                 if (this._levels.get(level) != undefined) {
                     return this._levels.get(level).copy();
                 }
-                /*Cases:
-                    I:      There is an enemy with lower level and scaling     -> Scale enemy from lower level
-                    II:     There is an enemy with higher level and no scaling -> Get enemy from higher level
-                    III:    There is no enemy with higher level and no scaling -> Throw error
-                */
-                let tempLevels = [];
-                for (const level of this._levels.keys()) {
-                    tempLevels.push(level);
-                }
-                tempLevels = tempLevels.sort();
-                if (this._scaling != undefined) {
-                    console.log("SCALED");
-                    return this._levels.get(0).copy();
-                }
                 else {
-                    let higher = undefined;
-                    tempLevels.forEach(e => {
-                        if (e > level) {
-                            if (higher == undefined) {
-                                higher = e;
-                            }
-                        }
-                    });
-                    if (higher == undefined) {
-                        throw "ERROR: No higher level enemy to initialize this one!";
+                    /*Cases:
+                        I:      There is an enemy with lower level and scaling     -> Scale enemy from lower level
+                        II:     There is an enemy with higher level and no scaling -> Get enemy from higher level
+                        III:    There is no enemy with higher level and no scaling -> Throw error
+                    */
+                    let tempLevels = [];
+                    for (const level of this._levels.keys()) {
+                        tempLevels.push(level);
+                    }
+                    tempLevels = tempLevels.sort();
+                    if (this._scaling != undefined) {
+                        console.log("SCALED");
+                        return this._levels.get(0).copy();
                     }
                     else {
-                        return this._levels.get(higher).copy();
+                        let higher = undefined;
+                        tempLevels.forEach(e => {
+                            if (e > level) {
+                                if (higher == undefined) {
+                                    higher = e;
+                                }
+                            }
+                        });
+                        if (higher == undefined) {
+                            throw "ERROR: No higher level enemy to initialize this one!";
+                        }
+                        else {
+                            return this._levels.get(higher).copy();
+                        }
                     }
                 }
             }
@@ -320,6 +329,138 @@ class Hand {
         this._cards = [];
     }
 }
+class PassableTile {
+    get type() {
+        return 'PassableTile';
+    }
+    constructor(backgroundColor) {
+        this._backgroundColor = backgroundColor;
+    }
+    repr(contentRepr = '') {
+        return "<div style=\"background-color: " + this._backgroundColor + "; width: 100%; height: 100%\">" + contentRepr + "</div>";
+    }
+    copy() {
+        return new PassableTile(this._backgroundColor);
+    }
+}
+class EnemyTile {
+    get type() {
+        return 'EnemyTile';
+    }
+    get backgroundTile() {
+        return this._backgroundTile;
+    }
+    constructor(backgroundTile = undefined) {
+        this._backgroundTile = backgroundTile;
+    }
+    setBackgroundTile(tile) {
+        if (this._backgroundTile == undefined) {
+            this._backgroundTile = tile;
+        }
+        else {
+            throw "ERROR: Cannot set background tile of EnemyTile when it is not unknown!";
+        }
+    }
+    repr(contentRepr = '') {
+        return this._backgroundTile.repr(contentRepr);
+    }
+    copy() {
+        return new EnemyTile(this.backgroundTile);
+    }
+}
+class TileWithPosition {
+    get row() {
+        return this._row;
+    }
+    get col() {
+        return this._col;
+    }
+    get tile() {
+        return this._tile;
+    }
+    constructor(row, col, tile) {
+        this._row = row;
+        this._col = col;
+        this._tile = tile;
+    }
+    copy() {
+        return new TileWithPosition(this._row, this._col, this._tile.copy());
+    }
+}
+class FightBoardTemplate {
+    get tiles() {
+        return this._tiles;
+    }
+    get defaultTile() {
+        return this._defTile;
+    }
+    constructor(defTile, tiles = []) {
+        this._tiles = [];
+        this._defTile = defTile;
+        tiles.forEach(e => { this._tiles.push(e.copy()); });
+    }
+    copy() {
+        return new FightBoardTemplate(this._defTile, this._tiles);
+    }
+}
+class FightBoard {
+    get baseLayer() {
+        return this._baseLayer;
+    }
+    get enemyLayer() {
+        return this._enemyLayer;
+    }
+    constructor(width, height) {
+        this._baseLayer = [];
+        this._enemyLayer = [];
+        this._enemySpawnTiles = [];
+        for (let i = 0; i < height; i++) {
+            this._baseLayer[i] = [];
+            this._enemyLayer[i] = [];
+        }
+        this._width = width;
+        this._height = height;
+    }
+    setUpFromTemplate(template) {
+        let templated = [];
+        this._enemySpawnTiles = [];
+        for (let i = 0; i < this._height; i++) {
+            templated.push([]);
+            for (let j = 0; j < this._width; j++) {
+                templated[i].push(false);
+            }
+        }
+        template.tiles.forEach(e => {
+            this._baseLayer[e.row][e.col] = e.tile.copy();
+            templated[e.row][e.col] = true;
+            if (e.tile.type == 'EnemyTile') {
+                this._enemySpawnTiles.push([e.row, e.col]);
+                let t = e.tile;
+                if (t.backgroundTile == undefined) {
+                    t.setBackgroundTile(template.defaultTile.copy());
+                }
+                this._baseLayer[e.row][e.col] = t;
+            }
+        });
+        for (let i = 0; i < this._height; i++) {
+            for (let j = 0; j < this._width; j++) {
+                if (!templated[i][j]) {
+                    this._baseLayer[i][j] = template.defaultTile.copy();
+                }
+            }
+        }
+    }
+    setUpEnemies(enemies) {
+        enemies.forEach(e => {
+            let r = MathUtil.getRandomIntBelow(this._enemySpawnTiles.length);
+            let place = this._enemySpawnTiles[r];
+            this._enemyLayer[place[0]][place[1]] = e;
+            this._enemySpawnTiles[r] = this._enemySpawnTiles[this._enemySpawnTiles.length - 1];
+            this._enemySpawnTiles.pop();
+        });
+        console.log(this._enemyLayer);
+    }
+}
 class Player {
     constructor() {
         this._nrActions = 2;
@@ -361,18 +502,29 @@ class FightInstance {
     get enemies() {
         return this._enemies;
     }
+    get fightBoard() {
+        return this._fightBoard;
+    }
+    setUpFightBoard(width, height, boardTemplate) {
+        this._fightBoard = new FightBoard(width, height);
+        this._fightBoard.setUpFromTemplate(boardTemplate);
+        this._fightBoard.setUpEnemies(this._enemies);
+    }
     addEnemy(e) {
+        e.symbol = String(this._enemies.length + 1);
         this._enemies.push(e);
     }
 }
 class Fight {
-    constructor(enemyNames) {
+    constructor(enemyNames, boardTemplate) {
         this._enemies = [];
         enemyNames.forEach(e => this._enemies.push(e));
+        this._boardTemplate = boardTemplate;
     }
     createFightInstance(level) {
         let fightInstance = new FightInstance();
         this._enemies.forEach(e => fightInstance.addEnemy(GameController.getEnemyByName(e).getEnemyWithLevel(level)));
+        fightInstance.setUpFightBoard(8, 7, this._boardTemplate);
         return fightInstance;
     }
 }
@@ -731,13 +883,20 @@ var ActionBarGUIs;
         }
         onMouseEnter(e, c_obj) {
             if (!DragAPI.dragging) {
-                c_obj._div.style.backgroundColor = 'rgb(0,0,255)';
+                c_obj._div.style.borderColor = 'rgb(0,0,255)';
             }
         }
         onMouseLeave(e, c_obj) {
             if (!DragAPI.dragging) {
-                c_obj._div.style.backgroundColor = 'rgb(0,0,0)';
+                c_obj._div.style.borderColor = 'green';
             }
+        }
+        setUpFightCell(row, col, board) {
+            let innerRepr = '';
+            if (board.enemyLayer[row][col] != undefined) {
+                innerRepr = "<div>" + board.enemyLayer[row][col].symbol + "</div>";
+            }
+            this._div.innerHTML = board.baseLayer[row][col].repr(innerRepr);
         }
     }
     AreaGridCellGUI._divClass = ".cell";
@@ -750,6 +909,9 @@ var ActionBarGUIs;
             this._div = div;
             this._div.style.left = (offsetInd * AreaGridRowGUI._rowOffset).toString() + "px";
             document.querySelectorAll(AreaGridRowGUI.classFullPath + "._" + nr + ">" + AreaGridCellGUI._divClass).forEach((e) => this._cellGUIs.push(new AreaGridCellGUI(e)));
+        }
+        setUpFightCell(row, col, board) {
+            this._cellGUIs[col].setUpFightCell(row, col, board);
         }
     }
     AreaGridRowGUI._divClass = ".row";
@@ -766,6 +928,9 @@ var ActionBarGUIs;
             ActionBarAreaGridGUI._nrInstances += 1;
             this._div = document.getElementById(ActionBarAreaGridGUI._divID);
             document.querySelectorAll(AreaGridRowGUI.classFullPath).forEach((e, i, l) => { this._rowGUIs.push(new AreaGridRowGUI(e, i, l.length - i - 1)); });
+        }
+        setUpFightBoard(fightInstance) {
+            fightInstance.fightBoard.baseLayer.forEach((e, row) => e.forEach((tile, col) => this._rowGUIs[row].setUpFightCell(row, col, fightInstance.fightBoard)));
         }
     }
     ActionBarAreaGridGUI._divID = "FSActionBarAreaGrid";
@@ -896,6 +1061,9 @@ var ActionBarGUIs;
             this._spellActionList.update();
             this._otherActionList.update();
         }
+        setUpFightBoard(fightInstance) {
+            this._areaGridGUI.setUpFightBoard(fightInstance);
+        }
     }
     ActionBarGUI._divID = "FightScreenActionBar";
     ActionBarGUI._nrElementsPerList = 10;
@@ -920,17 +1088,15 @@ var InfoBarGUIs;
     InfoBarStatusBarsGUI._divID = "FSInfoBarStatusBars";
     InfoBarStatusBarsGUI._nrInstances = 0;
     class EnemyGridGUI {
-        constructor(div, symbol) {
+        constructor(div) {
             this._div = div;
             if (EnemyGridGUI._divDisplay == null) {
                 EnemyGridGUI._divDisplay = this._div.style.display;
             }
-            this._number = this._div.childNodes[1].childNodes[1];
-            this._number.innerHTML = symbol;
+            this._symbol = this._div.childNodes[1].childNodes[1];
             this._name = this._div.childNodes[1].childNodes[3];
             this._desc = this._div.childNodes[3];
             this._mods = this._div.childNodes[5];
-            this._symbol = symbol;
         }
         setEnemy(enemy) {
             this._enemy = enemy;
@@ -942,20 +1108,22 @@ var InfoBarGUIs;
             }
         }
         show() {
-            this.update();
+            this.updateGUI();
             this._div.style.display = EnemyGridGUI._divDisplay;
         }
         hide() {
-            this.update();
+            this.updateGUI();
             this._div.style.display = 'none';
         }
-        update() {
+        updateGUI() {
             if (this._enemy == undefined) {
+                this._symbol.innerHTML = "";
                 this._name.innerHTML = "";
                 this._desc.innerHTML = "";
                 this._mods.innerHTML = "";
             }
             else {
+                this._symbol.innerHTML = this._enemy.symbol;
                 this._name.innerHTML = this._enemy.name;
                 this._desc.innerHTML = this._enemy.desc;
                 this._mods.innerHTML = "";
@@ -1056,12 +1224,15 @@ var InfoBarGUIs;
             }
             InfoBarEnemyGridGUI._nrInstances += 1;
             this._div = document.getElementById(InfoBarEnemyGridGUI._divID);
-            document.querySelectorAll(InfoBarEnemyGridGUI.fullPath + ">" + EnemyGridGUI._divClass).forEach((e, i) => this._enemyGrindGUIs.push(new EnemyGridGUI(e, String(i + 1))));
+            document.querySelectorAll(InfoBarEnemyGridGUI.fullPath + ">" + EnemyGridGUI._divClass).forEach((e, i) => this._enemyGrindGUIs.push(new EnemyGridGUI(e)));
             this._timerGridGUI = new EnemyGridTimerGridGUI();
             this.update();
         }
         update() {
             this._enemyGrindGUIs.forEach((e, i) => { i < InfoBarEnemyGridGUI._nrEnemyGridGUIs ? e.show() : e.hide(); });
+        }
+        setUpFight(fightInstance) {
+            fightInstance.enemies.forEach((e, i) => this._enemyGrindGUIs[i].setEnemy(e));
         }
         resetTimer() {
             this._timerGridGUI.reset();
@@ -1106,6 +1277,7 @@ var InfoBarGUIs;
             this._playerInfoGUI.resetFightRound();
         }
         setUpEnemiesGUI(fightInstance) {
+            this._enemyGridGUI.setUpFight(fightInstance);
         }
     }
     InfoBarGUI._divID = "FightScreenInfoBar";
@@ -1282,7 +1454,7 @@ class FightScreenGUI {
         this._div = document.getElementById(FightScreenGUI._divID);
         this._infoBarGUI = new InfoBarGUIs.InfoBarGUI();
         this._actionBarGUI = new ActionBarGUIs.ActionBarGUI();
-        this._actoinPlanBarGUI = new ActionPlanBarGUIs.ActionPlanBarGUI();
+        this._actionPlanBarGUI = new ActionPlanBarGUIs.ActionPlanBarGUI();
         this.setUpEventListeners();
     }
     setUpEventListeners() {
@@ -1290,6 +1462,8 @@ class FightScreenGUI {
         this._div.addEventListener('mousemove', (e) => c_obj.onMouseMove(e, c_obj));
     }
     setUpFight(fightInstance) {
+        this._infoBarGUI.setUpEnemiesGUI(fightInstance);
+        this._actionBarGUI.setUpFightBoard(fightInstance);
     }
     onMouseMove(e, c_obj) {
         if (DragAPI.dragging) {
@@ -1298,7 +1472,7 @@ class FightScreenGUI {
     }
     resetFightRound() {
         this._infoBarGUI.resetFightRound();
-        this._actoinPlanBarGUI.resetFightRound();
+        this._actionPlanBarGUI.resetFightRound();
     }
 }
 FightScreenGUI._divID = "FightScreen";
@@ -1338,7 +1512,7 @@ class GameController {
 GameController._initialized = false;
 GameController._enemies = new Map();
 GameController.init();
-let f = new Fight(['Goblin']);
+let f = new Fight(['Goblin'], new FightBoardTemplate(new PassableTile("#005000"), [new TileWithPosition(1, 1, new EnemyTile())]));
 let fI = f.createFightInstance(1);
 FightScreenController.startFight(fI);
 //# sourceMappingURL=main.js.map

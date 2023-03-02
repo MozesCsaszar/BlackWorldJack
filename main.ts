@@ -91,6 +91,7 @@ namespace Enemy {
     export class EnemyWithLevel {
         private _body: EnemyBody;
         //private _elitenessModifiers: EnemyBody[] = [];
+        private _symbol: string;
         private _level: number;
         private _info: EnemyInfo;
         constructor(body: EnemyBody, level: number) {
@@ -106,12 +107,19 @@ namespace Enemy {
         get desc(): string {
             return this._info.desc;
         }
+        get symbol(): string {
+            return this._symbol;
+        }
+        set enemyInfo(info: EnemyInfo) {
+            this._info = info;
+        }
+        set symbol(sym: string) {
+            this._symbol = sym;
+        }
         copy(): EnemyWithLevel {
             let e: EnemyWithLevel = new EnemyWithLevel(this._body.copy(), this._level);
+            e.enemyInfo = this._info;
             return e;
-        }
-        setEnemyInfo(info: EnemyInfo) {
-            this._info = info;
         }
     }
     
@@ -128,7 +136,7 @@ namespace Enemy {
         constructor(name: string, desc: string, levels: Map<number, EnemyWithLevel>, scaling: Scaling = undefined) {
             this._name = name;
             this._desc = desc;
-            levels.forEach( (e, k) => { e.setEnemyInfo(this.getInfo()); this._levels.set(k, e.copy()); } );
+            levels.forEach( (e, k) => { e.enemyInfo = this.getInfo(); this._levels.set(k, e.copy()); } );
             this._scaling = scaling == undefined ? undefined : scaling.copy();
         }
         copy(): Enemy {
@@ -140,36 +148,38 @@ namespace Enemy {
                 if(this._levels.get(level) != undefined) {
                     return this._levels.get(level).copy();
                 }
-                /*Cases:
-                    I:      There is an enemy with lower level and scaling     -> Scale enemy from lower level
-                    II:     There is an enemy with higher level and no scaling -> Get enemy from higher level
-                    III:    There is no enemy with higher level and no scaling -> Throw error
-                */
-                let tempLevels: number[] = [];
-                for(const level of this._levels.keys()) {
-                        tempLevels.push(level);
-                }
-                tempLevels = tempLevels.sort();
-                if(this._scaling != undefined) {
-                    console.log("SCALED");
-                    return this._levels.get(0).copy();
-                }
                 else {
-                    let higher: number = undefined;
-                    tempLevels.forEach(
-                        e => {
-                            if(e > level) {
-                                if(higher == undefined) {
-                                    higher = e;
-                                }
-                            }
-                        }
-                    );
-                    if(higher == undefined) {
-                        throw "ERROR: No higher level enemy to initialize this one!";
+                    /*Cases:
+                        I:      There is an enemy with lower level and scaling     -> Scale enemy from lower level
+                        II:     There is an enemy with higher level and no scaling -> Get enemy from higher level
+                        III:    There is no enemy with higher level and no scaling -> Throw error
+                    */
+                    let tempLevels: number[] = [];
+                    for(const level of this._levels.keys()) {
+                            tempLevels.push(level);
+                    }
+                    tempLevels = tempLevels.sort();
+                    if(this._scaling != undefined) {
+                        console.log("SCALED");
+                        return this._levels.get(0).copy();
                     }
                     else {
-                        return this._levels.get(higher).copy();
+                        let higher: number = undefined;
+                        tempLevels.forEach(
+                            e => {
+                                if(e > level) {
+                                    if(higher == undefined) {
+                                        higher = e;
+                                    }
+                                }
+                            }
+                        );
+                        if(higher == undefined) {
+                            throw "ERROR: No higher level enemy to initialize this one!";
+                        }
+                        else {
+                           return this._levels.get(higher).copy();
+                        }
                     }
                 }
             }
@@ -365,7 +375,159 @@ class Hand {
     }
 }
 
+interface FightBoardTile {
+    repr(contentRepr: string): string;
+    get type(): string;
+    copy() : FightBoardTile;
+}
 
+class PassableTile implements FightBoardTile {
+    private _backgroundColor: string;
+    get type(): string {
+        return 'PassableTile';
+    }
+    constructor(backgroundColor: string) {
+        this._backgroundColor = backgroundColor;
+    }
+    repr(contentRepr: string = ''): string {
+        return "<div style=\"background-color: " + this._backgroundColor + "; width: 100%; height: 100%\">" + contentRepr + "</div>";
+    }
+    copy(): PassableTile {
+        return new PassableTile(this._backgroundColor);
+    }
+    
+}
+
+class EnemyTile implements FightBoardTile {
+    private _backgroundTile: FightBoardTile;
+    get type(): string {
+        return 'EnemyTile';
+    }
+    get backgroundTile(): FightBoardTile {
+        return this._backgroundTile;
+    }
+    constructor(backgroundTile: FightBoardTile = undefined) {
+        this._backgroundTile = backgroundTile;
+    }
+    setBackgroundTile(tile: FightBoardTile): void {
+        if(this._backgroundTile == undefined) {
+            this._backgroundTile = tile;
+        }
+        else {
+            throw "ERROR: Cannot set background tile of EnemyTile when it is not unknown!";
+        }
+    }
+    repr(contentRepr: string = ''): string {
+        return this._backgroundTile.repr(contentRepr);
+    }
+    copy(): EnemyTile {
+        return new EnemyTile(this.backgroundTile);
+    }
+}
+
+class TileWithPosition {
+    private _row: number;
+    private _col: number;
+    private _tile: FightBoardTile;
+    get row(): number {
+        return this._row;
+    }
+    get col(): number {
+        return this._col;
+    }
+    get tile(): FightBoardTile {
+        return this._tile;
+    }
+    constructor(row: number, col: number, tile: FightBoardTile) {
+        this._row = row;
+        this._col = col;
+        this._tile = tile;
+    }
+    copy(): TileWithPosition {
+        return new TileWithPosition(this._row, this._col, this._tile.copy());
+    }
+}
+
+class FightBoardTemplate {
+    private _defTile: FightBoardTile;
+    private _tiles: TileWithPosition[] = [];
+    get tiles(): readonly TileWithPosition[] {
+        return this._tiles;
+    }
+    get defaultTile(): FightBoardTile {
+        return this._defTile;
+    }
+    constructor(defTile: FightBoardTile, tiles: TileWithPosition[] = []) {
+        this._defTile = defTile;
+        tiles.forEach( e => {this._tiles.push(e.copy());} );
+    }
+    copy(): FightBoardTemplate {
+        return new FightBoardTemplate(this._defTile, this._tiles);
+    }
+}
+
+class FightBoard {
+    private _baseLayer: FightBoardTile[][] = [];
+    private _enemyLayer: Enemy.EnemyWithLevel[][] = [];
+    private _width: number;
+    private _height: number;
+    private _enemySpawnTiles: number[][] = [];
+    get baseLayer(): readonly FightBoardTile[][] {
+        return this._baseLayer;
+    }
+    get enemyLayer(): readonly Enemy.EnemyWithLevel[][] {
+        return this._enemyLayer;
+    }
+    constructor(width: number, height: number) {
+        for(let i = 0; i < height; i++) {
+            this._baseLayer[i] = [];
+            this._enemyLayer[i] = [];
+        }
+        this._width = width;
+        this._height = height;
+    }
+    setUpFromTemplate(template: FightBoardTemplate) {
+        let templated: boolean[][] = [];
+        this._enemySpawnTiles = [];
+        for(let i = 0; i < this._height; i++) {
+            templated.push([]);
+            for(let j = 0 ; j < this._width; j++) {
+                templated[i].push(false);
+            }
+        }
+        template.tiles.forEach( e => {
+            this._baseLayer[e.row][e.col] = e.tile.copy(); 
+            templated[e.row][e.col] = true;
+            if (e.tile.type == 'EnemyTile') {
+                this._enemySpawnTiles.push([e.row, e.col]);
+                let t: EnemyTile = e.tile as EnemyTile;
+                if(t.backgroundTile == undefined) {
+                    t.setBackgroundTile(template.defaultTile.copy());
+                }
+                this._baseLayer[e.row][e.col] = t;
+            }
+        } );
+        for(let i = 0; i < this._height; i++) {
+            for(let j = 0 ; j < this._width; j++) {
+                if(!templated[i][j]) {
+                    this._baseLayer[i][j] = template.defaultTile.copy();
+                }
+            }
+        }
+    }
+    setUpEnemies(enemies: Enemy.EnemyWithLevel[]) {
+        enemies.forEach(
+            e => {
+                let r: number = MathUtil.getRandomIntBelow(this._enemySpawnTiles.length);
+                let place: number[] = this._enemySpawnTiles[r];
+                this._enemyLayer[place[0]][place[1]] = e;
+                this._enemySpawnTiles[r] = this._enemySpawnTiles[this._enemySpawnTiles.length - 1];
+                this._enemySpawnTiles.pop();
+            }
+        );
+        console.log(this._enemyLayer);
+    }
+}
 
 class Player {
     private _nrActions: number = 2;
@@ -404,27 +566,40 @@ class Action {
 
 class FightInstance {
     private _enemies: Enemy.EnemyWithLevel[] = [];
+    private _fightBoard: FightBoard;
 
     get enemies(): readonly Enemy.EnemyWithLevel[] {
         return this._enemies;
     }
+    get fightBoard(): FightBoard {
+        return this._fightBoard;
+    }
 
+    setUpFightBoard(width:number, height: number, boardTemplate: FightBoardTemplate) {
+        this._fightBoard = new FightBoard(width, height);
+        this._fightBoard.setUpFromTemplate(boardTemplate);
+        this._fightBoard.setUpEnemies(this._enemies);
+    }
     addEnemy(e: Enemy.EnemyWithLevel) {
+        e.symbol = String(this._enemies.length + 1);
         this._enemies.push(e);
     }
 }
 
 class Fight {
     private _enemies: string[] = [];
+    private _boardTemplate: FightBoardTemplate;
 
-    constructor(enemyNames: string[]) {
+    constructor(enemyNames: string[], boardTemplate: FightBoardTemplate) {
         enemyNames.forEach(e => this._enemies.push(e));
+        this._boardTemplate = boardTemplate;
     }
     createFightInstance(level: number): FightInstance {
         let fightInstance = new FightInstance();
         this._enemies.forEach(
             e => fightInstance.addEnemy(GameController.getEnemyByName(e).getEnemyWithLevel(level))
         )
+        fightInstance.setUpFightBoard(8, 7, this._boardTemplate);
         return fightInstance;
     }
 }
@@ -603,7 +778,7 @@ namespace ActionPlanBarGUIs {
         get final(): boolean {
             return this.busted || this._handGUI.final;
         }
-        setUpEventListeners() {
+        private setUpEventListeners() {
             let c_obj: ActionSpaceGUI = this;
             c_obj._div.addEventListener('mouseenter', (e: MouseEvent) => c_obj.onMouseEnter(e, c_obj));
             c_obj._div.addEventListener('mouseleave', (e: MouseEvent) => c_obj.onMouseLeave(e, c_obj));
@@ -689,7 +864,7 @@ namespace ActionPlanBarGUIs {
         setContentSuitsValuesMana(suits: string[], values: string[], manaType: CardManaTypes = CardManaTypes.neutral): void {
             this._deck.setContentSuitsValuesMana(suits, values, manaType);
         }
-        setUpEventListeners(): void {
+        private setUpEventListeners(): void {
             let c_obj: DeckGUI = this;
             this._div.addEventListener("mousedown", (e: MouseEvent) => c_obj.onMouseDown(e, c_obj));
         }
@@ -826,20 +1001,27 @@ namespace ActionBarGUIs {
             this._div = div;
             this.setUpEventListeners();
         }
-        setUpEventListeners() {
+        private setUpEventListeners() {
             let c_obj: AreaGridCellGUI = this;
             this._div.addEventListener('mouseenter', (e: MouseEvent) => c_obj.onMouseEnter(e, c_obj));
             this._div.addEventListener('mouseleave', (e: MouseEvent) => c_obj.onMouseLeave(e, c_obj));
         }
         onMouseEnter(e: MouseEvent, c_obj: AreaGridCellGUI) {
             if(!DragAPI.dragging) {
-                c_obj._div.style.backgroundColor = 'rgb(0,0,255)';
+                c_obj._div.style.borderColor = 'rgb(0,0,255)';
             }
         }
         onMouseLeave(e: MouseEvent, c_obj: AreaGridCellGUI) {
             if(!DragAPI.dragging) {
-                c_obj._div.style.backgroundColor = 'rgb(0,0,0)';
+                c_obj._div.style.borderColor = 'green';
             }
+        }
+        setUpFightCell(row: number, col: number, board: FightBoard) {
+            let innerRepr: string = '';
+            if(board.enemyLayer[row][col] != undefined) {
+                innerRepr = "<div>" +  board.enemyLayer[row][col].symbol + "</div>";
+            }
+            this._div.innerHTML = board.baseLayer[row][col].repr(innerRepr);
         }
     }
     
@@ -858,6 +1040,9 @@ namespace ActionBarGUIs {
             document.querySelectorAll(AreaGridRowGUI.classFullPath + "._" + nr + ">" + AreaGridCellGUI._divClass).forEach(
                 (e) => this._cellGUIs.push(new AreaGridCellGUI(e as HTMLElement))
             );
+        }
+        setUpFightCell(row: number, col: number, board: FightBoard) {
+            this._cellGUIs[col].setUpFightCell(row, col, board);
         }
     }
     
@@ -881,6 +1066,13 @@ namespace ActionBarGUIs {
                 (e, i, l) => {this._rowGUIs.push(new AreaGridRowGUI(e as HTMLElement, i, l.length - i - 1))}
             )
         }
+        setUpFightBoard(fightInstance: FightInstance) {
+            fightInstance.fightBoard.baseLayer.forEach(
+                (e, row) => e.forEach(
+                    (tile, col) => this._rowGUIs[row].setUpFightCell(row, col, fightInstance.fightBoard)
+                )
+            );
+        }
     }
 
     export class ActionListElementGUI {
@@ -900,7 +1092,7 @@ namespace ActionBarGUIs {
             this._div = div;
             this.setUpEventListeners();
         }
-        setUpEventListeners() {
+        private setUpEventListeners() {
             let c_obj: ActionListElementGUI = this;
             this._div.addEventListener('mousedown', (e: MouseEvent) => c_obj.onMouseDown(e, c_obj));
         }
@@ -1035,6 +1227,9 @@ namespace ActionBarGUIs {
             this._spellActionList.update();
             this._otherActionList.update();
         }
+        setUpFightBoard(fightInstance: FightInstance): void {
+            this._areaGridGUI.setUpFightBoard(fightInstance);
+        }
     }
 }
 
@@ -1064,22 +1259,19 @@ namespace InfoBarGUIs {
     
         private _div: HTMLElement;
         private _enemy: Enemy.EnemyWithLevel;
-        private _number: HTMLElement;
+        private _symbol: HTMLElement;
         private _name: HTMLElement;
         private _desc: HTMLElement;
         private _mods: HTMLElement;
-        private _symbol: string;
-        constructor(div: HTMLElement, symbol: string) {
+        constructor(div: HTMLElement) {
             this._div = div;
             if(EnemyGridGUI._divDisplay == null) {
                 EnemyGridGUI._divDisplay = this._div.style.display;
             }
-            this._number = this._div.childNodes[1].childNodes[1] as HTMLElement;
-            this._number.innerHTML = symbol;
+            this._symbol = this._div.childNodes[1].childNodes[1] as HTMLElement;
             this._name = this._div.childNodes[1].childNodes[3] as HTMLElement;
             this._desc = this._div.childNodes[3] as HTMLElement;
             this._mods = this._div.childNodes[5] as HTMLElement;
-            this._symbol = symbol;
         }
         setEnemy(enemy: Enemy.EnemyWithLevel) {
             this._enemy = enemy;
@@ -1091,20 +1283,22 @@ namespace InfoBarGUIs {
             }
         }
         show() {
-            this.update();
+            this.updateGUI();
             this._div.style.display = EnemyGridGUI._divDisplay;
         }
         hide() {
-            this.update();
+            this.updateGUI();
             this._div.style.display = 'none';
         }
-        update() {
+        updateGUI() {
             if(this._enemy == undefined) {
+                this._symbol.innerHTML = "";
                 this._name.innerHTML = "";
                 this._desc.innerHTML = "";
                 this._mods.innerHTML = "";
             }
             else {
+                this._symbol.innerHTML = this._enemy.symbol;
                 this._name.innerHTML = this._enemy.name;
                 this._desc.innerHTML = this._enemy.desc;
                 this._mods.innerHTML = "";
@@ -1122,7 +1316,7 @@ namespace InfoBarGUIs {
             this._div = div;
             this.setUpEventListeners();
         }
-        setUpEventListeners() {
+        private setUpEventListeners() {
             let c_obj: TimerGridStopPlanningGUI = this;
             c_obj._div.addEventListener('mousedown', (e: MouseEvent) => this.onMouseDown(e, c_obj));
         }
@@ -1228,13 +1422,18 @@ namespace InfoBarGUIs {
             InfoBarEnemyGridGUI._nrInstances += 1;
             this._div = document.getElementById(InfoBarEnemyGridGUI._divID);
             document.querySelectorAll(InfoBarEnemyGridGUI.fullPath + ">" + EnemyGridGUI._divClass).forEach(
-                (e, i) => this._enemyGrindGUIs.push(new EnemyGridGUI(e as HTMLElement, String(i + 1)))
+                (e, i) => this._enemyGrindGUIs.push(new EnemyGridGUI(e as HTMLElement))
             );
             this._timerGridGUI = new EnemyGridTimerGridGUI();
             this.update();
         }
         update() {
             this._enemyGrindGUIs.forEach((e, i) => {i < InfoBarEnemyGridGUI._nrEnemyGridGUIs ? e.show() : e.hide()});
+        }
+        setUpFight(fightInstance: FightInstance) {
+            fightInstance.enemies.forEach(
+                (e, i) => this._enemyGrindGUIs[i].setEnemy(e)
+            )
         }
         resetTimer() {
             this._timerGridGUI.reset();
@@ -1290,7 +1489,7 @@ namespace InfoBarGUIs {
             this._playerInfoGUI.resetFightRound();
         }
         setUpEnemiesGUI(fightInstance: FightInstance): void {
-            
+            this._enemyGridGUI.setUpFight(fightInstance);
         }
     }
 }
@@ -1484,21 +1683,22 @@ class FightScreenGUI {
     private _div: HTMLElement;
     private _infoBarGUI: InfoBarGUIs.InfoBarGUI;
     private _actionBarGUI: ActionBarGUIs.ActionBarGUI;
-    private _actoinPlanBarGUI: ActionPlanBarGUIs.ActionPlanBarGUI;
+    private _actionPlanBarGUI: ActionPlanBarGUIs.ActionPlanBarGUI;
     constructor() {
         FightScreenGUI._self = this;
         this._div = document.getElementById(FightScreenGUI._divID);
         this._infoBarGUI = new InfoBarGUIs.InfoBarGUI();
         this._actionBarGUI = new ActionBarGUIs.ActionBarGUI();
-        this._actoinPlanBarGUI = new ActionPlanBarGUIs.ActionPlanBarGUI();
+        this._actionPlanBarGUI = new ActionPlanBarGUIs.ActionPlanBarGUI();
         this.setUpEventListeners();
     }
-    setUpEventListeners(): void {
+    private setUpEventListeners(): void {
         let c_obj: FightScreenGUI = this;
         this._div.addEventListener('mousemove', (e: MouseEvent) => c_obj.onMouseMove(e, c_obj))
     }
     setUpFight(fightInstance: FightInstance) {
-
+        this._infoBarGUI.setUpEnemiesGUI(fightInstance);
+        this._actionBarGUI.setUpFightBoard(fightInstance);
     }
     private onMouseMove(e: MouseEvent, c_obj: FightScreenGUI): void {
         if(DragAPI.dragging) {
@@ -1507,7 +1707,7 @@ class FightScreenGUI {
     }
     private resetFightRound(): void {
         this._infoBarGUI.resetFightRound();
-        this._actoinPlanBarGUI.resetFightRound();
+        this._actionPlanBarGUI.resetFightRound();
     }
 }
 
@@ -1530,7 +1730,6 @@ class FightScreenController {
 
 class GameController {
     private static _initialized: boolean = false;
-    private static _enemies: Map<string, Enemy.Enemy> = new Map<string, Enemy.Enemy>();
 
     static getEnemyByName(name: string): Enemy.Enemy {
         return Enemy.enemies[name];
@@ -1548,10 +1747,11 @@ class GameController {
         }
         this.initAPIs();
         this.initControllers();
-    }}
+    }
+}
 
 GameController.init();
 
-let f = new Fight(['Goblin']);
+let f = new Fight(['Goblin'], new FightBoardTemplate(new PassableTile("#005000"), [new TileWithPosition(1, 1, new EnemyTile())]));
 let fI = f.createFightInstance(1);
 FightScreenController.startFight(fI);
