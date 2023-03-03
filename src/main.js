@@ -29,6 +29,17 @@ class ElementalAttributes {
         return new ElementalAttributes(this.physical, this.fire, this.water, this.earth, this.water);
     }
 }
+class EntityStats {
+    constructor(health, defense, attack, resistance) {
+        this._health = health;
+        this._defense = defense;
+        this._attack = attack;
+        this._resistance = resistance;
+    }
+    copy() {
+        return new EntityStats(this._health, this._defense.copy(), this._attack.copy(), this._resistance.copy());
+    }
+}
 var Enemy;
 (function (Enemy_1) {
     let Modifier;
@@ -39,18 +50,10 @@ var Enemy;
             return new Scaling();
         }
     }
-    class EnemyStats {
-        constructor(health, defense, attack, resistance) {
-            this._health = health;
-            this._defense = defense;
-            this._attack = attack;
-            this._resistance = resistance;
-        }
-        copy() {
-            return new EnemyStats(this._health, this._defense.copy(), this._attack.copy(), this._resistance.copy());
-        }
-    }
     class EnemyBody {
+        get attributes() {
+            return this._attributes;
+        }
         constructor(attributes, modifiers) {
             this._modifiers = [];
             this._attributes = attributes.copy();
@@ -67,9 +70,11 @@ var Enemy;
         }
     }
     class EnemyWithLevel {
-        constructor(body, level) {
-            this._body = body.copy();
-            this._level = level;
+        get pos() {
+            return this._pos;
+        }
+        get baseStats() {
+            return this._body.attributes;
         }
         get level() {
             return this._level;
@@ -88,6 +93,13 @@ var Enemy;
         }
         set symbol(sym) {
             this._symbol = sym;
+        }
+        set pos(position) {
+            this._pos = position;
+        }
+        constructor(body, level) {
+            this._body = body.copy();
+            this._level = level;
         }
         copy() {
             let e = new EnemyWithLevel(this._body.copy(), this._level);
@@ -160,7 +172,7 @@ var Enemy;
     Enemy_1.Enemy = Enemy;
     Enemy_1.enemies = {
         'Goblin': new Enemy('Goblin', 'Stinky and foul looking, these creatures are not the bestest fighters.', new Map([
-            [1, new EnemyWithLevel(new EnemyBody(new EnemyStats(10, new ElementalAttributes(), new ElementalAttributes(3), new ElementalAttributes()), []), 1)]
+            [1, new EnemyWithLevel(new EnemyBody(new EntityStats(10, new ElementalAttributes(), new ElementalAttributes(3), new ElementalAttributes()), []), 1)]
         ])),
     };
 })(Enemy || (Enemy = {}));
@@ -404,6 +416,9 @@ class FightBoardTemplate {
     }
 }
 class FightBoard {
+    get playerPos() {
+        return this._playerPos;
+    }
     get baseLayer() {
         return this._baseLayer;
     }
@@ -455,22 +470,40 @@ class FightBoard {
             let r = MathUtil.getRandomIntBelow(this._enemySpawnTiles.length);
             let place = this._enemySpawnTiles[r];
             this._enemyLayer[place[0]][place[1]] = e;
+            e.pos = place;
             this._enemySpawnTiles[r] = this._enemySpawnTiles[this._enemySpawnTiles.length - 1];
             this._enemySpawnTiles.pop();
         });
-        console.log(this._enemyLayer);
+    }
+    setUpPlayer(playerPos) {
+        this._playerPos = playerPos;
     }
 }
 class Player {
-    constructor() {
-        this._nrActions = 2;
-        this._nrDecks = 1;
+    get pos() {
+        return this._pos;
     }
     get nrActions() {
         return this._nrActions;
     }
-    set nrActions(nr) {
-        this._nrActions = nr;
+    get nrDecks() {
+        return this._nrDecks;
+    }
+    get baseStats() {
+        return this._baseStats;
+    }
+    set pos(position) {
+        this._pos = position;
+    }
+    // set nrActions(nr: number) {
+    //     this._nrActions = nr;
+    // }
+    constructor(baseStats, nrActions, nrDecks) {
+        this._nrActions = 2;
+        this._nrDecks = 1;
+        this._baseStats = baseStats;
+        this._nrActions = nrActions;
+        this._nrDecks = nrDecks;
     }
 }
 class Action {
@@ -505,14 +538,26 @@ class FightInstance {
     get fightBoard() {
         return this._fightBoard;
     }
+    get player() {
+        return this._player;
+    }
+    get playerPos() {
+        return this._playerPos;
+    }
     setUpFightBoard(width, height, boardTemplate) {
         this._fightBoard = new FightBoard(width, height);
         this._fightBoard.setUpFromTemplate(boardTemplate);
         this._fightBoard.setUpEnemies(this._enemies);
+        this._fightBoard.setUpPlayer(this.playerPos);
     }
     addEnemy(e) {
         e.symbol = String(this._enemies.length + 1);
         this._enemies.push(e);
+    }
+    addPlayer(player, playerPos) {
+        this._player = player;
+        player.pos = playerPos;
+        this._playerPos = playerPos;
     }
 }
 class Fight {
@@ -521,9 +566,12 @@ class Fight {
         enemyNames.forEach(e => this._enemies.push(e));
         this._boardTemplate = boardTemplate;
     }
-    createFightInstance(level) {
+    createFightInstance(level, player, playerPos) {
         let fightInstance = new FightInstance();
+        //Set up Entities: Enemies and Player
         this._enemies.forEach(e => fightInstance.addEnemy(GameController.getEnemyByName(e).getEnemyWithLevel(level)));
+        fightInstance.addPlayer(player, playerPos);
+        //Set up the Board
         fightInstance.setUpFightBoard(8, 7, this._boardTemplate);
         return fightInstance;
     }
@@ -803,21 +851,25 @@ var ActionPlanBarGUIs;
     DeckGUI._dragProperties = ['width', 'height', 'border', 'backgroundColor'];
     class DeckHolderGUI {
         constructor() {
-            this._currentDeckGUIs = 1;
             this._deckGUIs = [];
             //set up deck GUI's
             document.querySelectorAll('#FightScreenActionPlanBar' + '>' + DeckHolderGUI._divClass + '>' + DeckGUI._divClass).forEach((e) => { this._deckGUIs.push(new DeckGUI(e)); });
             this._deckGUIs[0].setContentSuitsValuesMana(Deck.suits, Deck.values);
             this.update();
         }
+        setUpFight(player) {
+            DeckHolderGUI._currentDeckGUIs = player.nrDecks;
+            this.update();
+        }
         update() {
-            this._deckGUIs.forEach((e, i) => { i < this._currentDeckGUIs ? e.show() : e.hide(); });
+            this._deckGUIs.forEach((e, i) => { i < DeckHolderGUI._currentDeckGUIs ? e.show() : e.hide(); });
         }
         resetFightRound() {
-            this._deckGUIs.forEach((e, i) => { i < this._currentDeckGUIs ? e.resetFightRound() : null; });
+            this._deckGUIs.forEach((e, i) => { i < DeckHolderGUI._currentDeckGUIs ? e.resetFightRound() : null; });
         }
     }
     DeckHolderGUI._divClass = ".deck_holder";
+    DeckHolderGUI._currentDeckGUIs = 1;
     class ActionHolderGUI {
         constructor(superDivID) {
             //set up deck GUI's
@@ -837,8 +889,12 @@ var ActionPlanBarGUIs;
                 ActionPlanBarGUI._finalAll = true;
             }
         }
+        setUpFight(player) {
+            ActionHolderGUI._currentActionGUIs = player.nrActions;
+            this.update();
+        }
         update() {
-            ActionHolderGUI._actionGUIs.forEach((e, i) => { i < ActionHolderGUI._currentActionGUIs ? e.show() : e.hide(); });
+            ActionHolderGUI._actionGUIs.forEach((e, i) => { i >= ActionHolderGUI._currentActionGUIs ? e.hide() : e.show(); });
         }
         resetFightRound() {
             ActionHolderGUI._actionGUIs.forEach((e, i) => {
@@ -851,11 +907,16 @@ var ActionPlanBarGUIs;
         }
     }
     ActionHolderGUI._currentActionGUIs = 7;
+    //private static _actionGUIConfig:number[][] = [[], [2], [1, 3], [1, 2, 3], [0, 1, 3, 4], [0, 1, 2, 3, 4], [0, 1, 3, 4, 5, 6], [0, 1, 2, 3, 4, 5, 6]]
     ActionHolderGUI._actionGUIs = [];
     class ActionPlanBarGUI {
         constructor() {
             this._deckHolderGUI = new DeckHolderGUI();
             this._actionHolderGUI = new ActionHolderGUI(ActionPlanBarGUI._divID);
+        }
+        setUpFight(fightInstance) {
+            this._actionHolderGUI.setUpFight(fightInstance.player);
+            this._deckHolderGUI.setUpFight(fightInstance.player);
         }
         resetFightRound() {
             this._deckHolderGUI.resetFightRound();
@@ -872,8 +933,10 @@ var ActionBarGUIs;
         static get classFullPath() {
             return AreaGridRowGUI.classFullPath + ">" + this._divClass;
         }
-        constructor(div) {
+        constructor(div, row, col) {
             this._div = div;
+            this._row = row;
+            this._col = col;
             this.setUpEventListeners();
         }
         setUpEventListeners() {
@@ -891,12 +954,15 @@ var ActionBarGUIs;
                 c_obj._div.style.borderColor = 'green';
             }
         }
-        setUpFightCell(row, col, board) {
+        setUpFightCell(board) {
             let innerRepr = '';
-            if (board.enemyLayer[row][col] != undefined) {
-                innerRepr = "<div>" + board.enemyLayer[row][col].symbol + "</div>";
+            if (board.enemyLayer[this._row][this._col] != undefined) {
+                innerRepr = "<div>" + board.enemyLayer[this._row][this._col].symbol + "</div>";
             }
-            this._div.innerHTML = board.baseLayer[row][col].repr(innerRepr);
+            else if (board.playerPos[0] == this._row && board.playerPos[1] == this._col) {
+                innerRepr = "<div>" + "P" + "</div>";
+            }
+            this._div.innerHTML = board.baseLayer[this._row][this._col].repr(innerRepr);
         }
     }
     AreaGridCellGUI._divClass = ".cell";
@@ -908,10 +974,10 @@ var ActionBarGUIs;
             this._cellGUIs = [];
             this._div = div;
             this._div.style.left = (offsetInd * AreaGridRowGUI._rowOffset).toString() + "px";
-            document.querySelectorAll(AreaGridRowGUI.classFullPath + "._" + nr + ">" + AreaGridCellGUI._divClass).forEach((e) => this._cellGUIs.push(new AreaGridCellGUI(e)));
+            document.querySelectorAll(AreaGridRowGUI.classFullPath + "._" + nr + ">" + AreaGridCellGUI._divClass).forEach((e, i) => this._cellGUIs.push(new AreaGridCellGUI(e, nr, i)));
         }
-        setUpFightCell(row, col, board) {
-            this._cellGUIs[col].setUpFightCell(row, col, board);
+        setUpFightCell(col, board) {
+            this._cellGUIs[col].setUpFightCell(board);
         }
     }
     AreaGridRowGUI._divClass = ".row";
@@ -930,7 +996,7 @@ var ActionBarGUIs;
             document.querySelectorAll(AreaGridRowGUI.classFullPath).forEach((e, i, l) => { this._rowGUIs.push(new AreaGridRowGUI(e, i, l.length - i - 1)); });
         }
         setUpFightBoard(fightInstance) {
-            fightInstance.fightBoard.baseLayer.forEach((e, row) => e.forEach((tile, col) => this._rowGUIs[row].setUpFightCell(row, col, fightInstance.fightBoard)));
+            fightInstance.fightBoard.baseLayer.forEach((e, row) => e.forEach((tile, col) => this._rowGUIs[row].setUpFightCell(col, fightInstance.fightBoard)));
         }
     }
     ActionBarAreaGridGUI._divID = "FSActionBarAreaGrid";
@@ -965,7 +1031,7 @@ var ActionBarGUIs;
                 let left = c_obj._div.getBoundingClientRect().left - 8;
                 let top = c_obj._div.getBoundingClientRect().top - 52;
                 c_obj.setUpDragObject(left, top);
-                DragAPI.startDrag(ActionListElementGUI._dragObjType, c_obj.action.save(), e);
+                DragAPI.startDrag(ActionListElementGUI._dragObjType, c_obj.action.save(), e, true);
             }
         }
         setUpDragObject(left, top) {
@@ -1347,7 +1413,15 @@ class DragAPI {
     static canDropHere(dragObjType) {
         if (this._dragging) {
             if (this._releasableDrag) {
-                return true;
+                if (this._insideDragDestArea) {
+                    if (this._dragObjType != dragObjType) {
+                        return false;
+                    }
+                    return true;
+                }
+                else {
+                    return true;
+                }
             }
             else {
                 return this._insideDragDestArea && this._dragObjType == dragObjType;
@@ -1429,10 +1503,16 @@ class DragAPI {
     }
     static setUpEventListeners() {
         DragAPI._body.addEventListener('mousemove', (e) => DragAPI.onMouseMove(e));
+        DragAPI._body.addEventListener('mouseup', (e) => DragAPI.onMouseUp(e));
     }
     static onMouseMove(e) {
         if (this.dragging) {
             DragAPI._dragObj.moveWithMouse(e);
+        }
+    }
+    static onMouseUp(e) {
+        if (this._releasableDrag && !this._insideDragDestArea) {
+            this.endDrag();
         }
     }
 }
@@ -1464,6 +1544,7 @@ class FightScreenGUI {
     setUpFight(fightInstance) {
         this._infoBarGUI.setUpEnemiesGUI(fightInstance);
         this._actionBarGUI.setUpFightBoard(fightInstance);
+        this._actionPlanBarGUI.setUpFight(fightInstance);
     }
     onMouseMove(e, c_obj) {
         if (DragAPI.dragging) {
@@ -1476,6 +1557,7 @@ class FightScreenGUI {
     }
 }
 FightScreenGUI._divID = "FightScreen";
+/*                                      Controllers                                                 */
 class FightScreenController {
     static init() {
         if (this._initialized) {
@@ -1484,7 +1566,7 @@ class FightScreenController {
         this._initialized = true;
         this._fightScreenGUI = new FightScreenGUI();
     }
-    static startFight(fightInstance) {
+    static setUpFight(fightInstance) {
         this._fightInstance = fightInstance;
         this._fightScreenGUI.setUpFight(this._fightInstance);
     }
@@ -1494,6 +1576,9 @@ FightScreenController._fightInstance = undefined;
 class GameController {
     static getEnemyByName(name) {
         return Enemy.enemies[name];
+    }
+    static get player() {
+        return this._player;
     }
     static initAPIs() {
         DragAPI.setUpEventListeners();
@@ -1507,12 +1592,13 @@ class GameController {
         }
         this.initAPIs();
         this.initControllers();
+        this._player = new Player(new EntityStats(10, new ElementalAttributes(), new ElementalAttributes(3), new ElementalAttributes()), 2, 1);
     }
 }
 GameController._initialized = false;
-GameController._enemies = new Map();
+/*                                      Initialization and other stuff                                                 */
 GameController.init();
 let f = new Fight(['Goblin'], new FightBoardTemplate(new PassableTile("#005000"), [new TileWithPosition(1, 1, new EnemyTile())]));
-let fI = f.createFightInstance(1);
-FightScreenController.startFight(fI);
+let fI = f.createFightInstance(1, GameController.player, [5, 5]);
+FightScreenController.setUpFight(fI);
 //# sourceMappingURL=main.js.map

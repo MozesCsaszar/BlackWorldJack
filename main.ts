@@ -36,6 +36,30 @@ class ElementalAttributes {
     }
 }
 
+class EntityStats {
+    private _health: Number;
+    private _defense: ElementalAttributes;
+    private _attack: ElementalAttributes;
+    private _resistance: ElementalAttributes;
+
+    constructor(health: Number, defense: ElementalAttributes,  attack: ElementalAttributes, resistance: ElementalAttributes) {
+        this._health = health;
+        this._defense = defense;
+        this._attack = attack;
+        this._resistance = resistance;
+    }
+
+    copy(): EntityStats {
+        return new EntityStats(this._health, this._defense.copy(), this._attack.copy(), this._resistance.copy());
+    }
+}
+
+interface Entity {
+    get baseStats(): EntityStats;
+    get pos(): number[];
+    set pos(position: number[]);
+}
+
 namespace Enemy {
     enum Modifier {
 
@@ -47,29 +71,13 @@ namespace Enemy {
         }
     }
 
-    class EnemyStats {
-        private _health: Number;
-        private _defense: ElementalAttributes;
-        private _attack: ElementalAttributes;
-        private _resistance: ElementalAttributes;
-
-        constructor(health: Number, defense: ElementalAttributes,  attack: ElementalAttributes, resistance: ElementalAttributes) {
-            this._health = health;
-            this._defense = defense;
-            this._attack = attack;
-            this._resistance = resistance;
-        }
-
-        copy(): EnemyStats {
-            return new EnemyStats(this._health, this._defense.copy(), this._attack.copy(), this._resistance.copy());
-        }
-    }
-
     class EnemyBody {
-        private _attributes: EnemyStats;
+        private _attributes: EntityStats;
         private _modifiers: Modifier[] = [];
-
-        constructor(attributes: EnemyStats, modifiers: Modifier[]) {
+        get attributes(): EntityStats {
+            return this._attributes;
+        }
+        constructor(attributes: EntityStats, modifiers: Modifier[]) {
             this._attributes = attributes.copy();
             modifiers.forEach( e => this._modifiers.push(e) );
         }
@@ -88,15 +96,18 @@ namespace Enemy {
         }
     }
 
-    export class EnemyWithLevel {
+    export class EnemyWithLevel implements Entity {
         private _body: EnemyBody;
         //private _elitenessModifiers: EnemyBody[] = [];
         private _symbol: string;
         private _level: number;
         private _info: EnemyInfo;
-        constructor(body: EnemyBody, level: number) {
-            this._body = body.copy(); 
-            this._level = level;
+        private _pos: number[];
+        get pos(): number[] {
+            return this._pos;
+        }
+        get baseStats(): EntityStats {
+            return this._body.attributes;
         }
         get level(): number { 
             return this._level; 
@@ -115,6 +126,13 @@ namespace Enemy {
         }
         set symbol(sym: string) {
             this._symbol = sym;
+        }
+        set pos(position: number[]) {
+            this._pos = position;
+        }
+        constructor(body: EnemyBody, level: number) {
+            this._body = body.copy(); 
+            this._level = level;
         }
         copy(): EnemyWithLevel {
             let e: EnemyWithLevel = new EnemyWithLevel(this._body.copy(), this._level);
@@ -195,14 +213,13 @@ namespace Enemy {
     export let enemies = {
         'Goblin': new Enemy('Goblin', 'Stinky and foul looking, these creatures are not the bestest fighters.', new Map<number, EnemyWithLevel>(
             [
-                [1, new EnemyWithLevel(new EnemyBody(new EnemyStats(10, new ElementalAttributes(), new ElementalAttributes(3), new ElementalAttributes()), []), 1)]
+                [1, new EnemyWithLevel(new EnemyBody(new EntityStats(10, new ElementalAttributes(), new ElementalAttributes(3), new ElementalAttributes()), []), 1)]
             ])),
         
     };
 }
 
 /*                                      Underlying Classes */
-
 
 enum CardManaTypes {
     neutral,
@@ -472,6 +489,10 @@ class FightBoard {
     private _width: number;
     private _height: number;
     private _enemySpawnTiles: number[][] = [];
+    private _playerPos: number[];
+    get playerPos(): number[] {
+        return this._playerPos;
+    }
     get baseLayer(): readonly FightBoardTile[][] {
         return this._baseLayer;
     }
@@ -521,22 +542,44 @@ class FightBoard {
                 let r: number = MathUtil.getRandomIntBelow(this._enemySpawnTiles.length);
                 let place: number[] = this._enemySpawnTiles[r];
                 this._enemyLayer[place[0]][place[1]] = e;
+                e.pos = place;
                 this._enemySpawnTiles[r] = this._enemySpawnTiles[this._enemySpawnTiles.length - 1];
                 this._enemySpawnTiles.pop();
             }
         );
-        console.log(this._enemyLayer);
+    }
+    setUpPlayer(playerPos: number[]) {
+        this._playerPos = playerPos;
     }
 }
 
 class Player {
     private _nrActions: number = 2;
     private _nrDecks: number = 1;
+    private _baseStats: EntityStats;
+    private _pos: number[];
+    get pos(): number[] {
+        return this._pos;
+    }
     get nrActions(): number {
         return this._nrActions;
-    } 
-    set nrActions(nr: number) {
-        this._nrActions = nr;
+    }  
+    get nrDecks(): number {
+        return this._nrDecks;
+    }
+    get baseStats(): EntityStats {
+        return this._baseStats;
+    }
+    set pos(position: number[]) {
+        this._pos = position;
+    }
+    // set nrActions(nr: number) {
+    //     this._nrActions = nr;
+    // }
+    constructor(baseStats: EntityStats, nrActions: number, nrDecks: number) {
+        this._baseStats = baseStats;
+        this._nrActions = nrActions;
+        this._nrDecks = nrDecks;
     }
 }
 
@@ -567,6 +610,8 @@ class Action {
 class FightInstance {
     private _enemies: Enemy.EnemyWithLevel[] = [];
     private _fightBoard: FightBoard;
+    private _player: Player;
+    private _playerPos: number[];
 
     get enemies(): readonly Enemy.EnemyWithLevel[] {
         return this._enemies;
@@ -574,15 +619,26 @@ class FightInstance {
     get fightBoard(): FightBoard {
         return this._fightBoard;
     }
-
+    get player(): Player {
+        return this._player;
+    }
+    get playerPos(): number[] {
+        return this._playerPos;
+    }
     setUpFightBoard(width:number, height: number, boardTemplate: FightBoardTemplate) {
         this._fightBoard = new FightBoard(width, height);
         this._fightBoard.setUpFromTemplate(boardTemplate);
         this._fightBoard.setUpEnemies(this._enemies);
+        this._fightBoard.setUpPlayer(this.playerPos);
     }
     addEnemy(e: Enemy.EnemyWithLevel) {
         e.symbol = String(this._enemies.length + 1);
         this._enemies.push(e);
+    }
+    addPlayer(player: Player, playerPos: number[]) {
+        this._player = player;
+        player.pos = playerPos;
+        this._playerPos = playerPos;
     }
 }
 
@@ -594,11 +650,15 @@ class Fight {
         enemyNames.forEach(e => this._enemies.push(e));
         this._boardTemplate = boardTemplate;
     }
-    createFightInstance(level: number): FightInstance {
+    createFightInstance(level: number, player: Player, playerPos: number[]): FightInstance {
         let fightInstance = new FightInstance();
+        //Set up Entities: Enemies and Player
         this._enemies.forEach(
             e => fightInstance.addEnemy(GameController.getEnemyByName(e).getEnemyWithLevel(level))
-        )
+        );
+        fightInstance.addPlayer(player, playerPos);
+
+        //Set up the Board
         fightInstance.setUpFightBoard(8, 7, this._boardTemplate);
         return fightInstance;
     }
@@ -907,7 +967,7 @@ namespace ActionPlanBarGUIs {
     class DeckHolderGUI {
         static readonly _divClass: string = ".deck_holder";
     
-        private  _currentDeckGUIs: number = 1;
+        private static  _currentDeckGUIs: number = 1;
         private _deckGUIs: DeckGUI[] = [];
     
         constructor() {
@@ -918,14 +978,18 @@ namespace ActionPlanBarGUIs {
             this._deckGUIs[0].setContentSuitsValuesMana(Deck.suits, Deck.values);
             this.update();
         }
+        setUpFight(player: Player): void {
+            DeckHolderGUI._currentDeckGUIs = player.nrDecks;
+            this.update();
+        }
         update(): void {
             this._deckGUIs.forEach(
-                (e:DeckGUI, i:number) => {i < this._currentDeckGUIs ? e.show() : e.hide();}
+                (e:DeckGUI, i:number) => {i < DeckHolderGUI._currentDeckGUIs ? e.show() : e.hide();}
             );
         }
         resetFightRound(): void {
             this._deckGUIs.forEach(
-                (e:DeckGUI, i:number) => {i < this._currentDeckGUIs ? e.resetFightRound() : null;}
+                (e:DeckGUI, i:number) => {i < DeckHolderGUI._currentDeckGUIs ? e.resetFightRound() : null;}
             );
         }
     }
@@ -933,6 +997,7 @@ namespace ActionPlanBarGUIs {
     class ActionHolderGUI {
     
         private static _currentActionGUIs: number = 7;
+        //private static _actionGUIConfig:number[][] = [[], [2], [1, 3], [1, 2, 3], [0, 1, 3, 4], [0, 1, 2, 3, 4], [0, 1, 3, 4, 5, 6], [0, 1, 2, 3, 4, 5, 6]]
         private static _actionGUIs: ActionSpaceGUI[] = [];
     
         constructor(superDivID: string) {
@@ -955,9 +1020,13 @@ namespace ActionPlanBarGUIs {
                 ActionPlanBarGUI._finalAll = true;
             }
         }
+        setUpFight(player: Player): void {
+            ActionHolderGUI._currentActionGUIs = player.nrActions;
+            this.update();
+        }
         update(): void {
             ActionHolderGUI._actionGUIs.forEach(
-                (e:ActionSpaceGUI, i:number) => {i < ActionHolderGUI._currentActionGUIs ? e.show() : e.hide();}
+                (e: ActionSpaceGUI, i: number) => { i >= ActionHolderGUI._currentActionGUIs ? e.hide() : e.show()}
             );
         }
         resetFightRound(): void {
@@ -982,6 +1051,10 @@ namespace ActionPlanBarGUIs {
             this._deckHolderGUI = new DeckHolderGUI();
             this._actionHolderGUI = new ActionHolderGUI(ActionPlanBarGUI._divID);
         }
+        setUpFight(fightInstance: FightInstance) {
+            this._actionHolderGUI.setUpFight(fightInstance.player);
+            this._deckHolderGUI.setUpFight(fightInstance.player);
+        }
         resetFightRound():void  {
             this._deckHolderGUI.resetFightRound();
             this._actionHolderGUI.resetFightRound();
@@ -997,8 +1070,12 @@ namespace ActionBarGUIs {
         }
 
         private _div: HTMLElement;
-        constructor(div: HTMLElement) {
+        private _row: number;
+        private _col: number;
+        constructor(div: HTMLElement, row: number, col: number) {
             this._div = div;
+            this._row = row;
+            this._col = col;
             this.setUpEventListeners();
         }
         private setUpEventListeners() {
@@ -1016,12 +1093,15 @@ namespace ActionBarGUIs {
                 c_obj._div.style.borderColor = 'green';
             }
         }
-        setUpFightCell(row: number, col: number, board: FightBoard) {
+        setUpFightCell(board: FightBoard) {
             let innerRepr: string = '';
-            if(board.enemyLayer[row][col] != undefined) {
-                innerRepr = "<div>" +  board.enemyLayer[row][col].symbol + "</div>";
+            if(board.enemyLayer[this._row][this._col] != undefined) {
+                innerRepr = "<div>" +  board.enemyLayer[this._row][this._col].symbol + "</div>";
             }
-            this._div.innerHTML = board.baseLayer[row][col].repr(innerRepr);
+            else if(board.playerPos[0] == this._row && board.playerPos[1] == this._col) {
+                innerRepr = "<div>" +  "P" + "</div>";
+            }
+            this._div.innerHTML = board.baseLayer[this._row][this._col].repr(innerRepr);
         }
     }
     
@@ -1038,11 +1118,11 @@ namespace ActionBarGUIs {
             this._div = div;
             this._div.style.left = (offsetInd * AreaGridRowGUI._rowOffset).toString() + "px";
             document.querySelectorAll(AreaGridRowGUI.classFullPath + "._" + nr + ">" + AreaGridCellGUI._divClass).forEach(
-                (e) => this._cellGUIs.push(new AreaGridCellGUI(e as HTMLElement))
+                (e, i) => this._cellGUIs.push(new AreaGridCellGUI(e as HTMLElement, nr, i))
             );
         }
-        setUpFightCell(row: number, col: number, board: FightBoard) {
-            this._cellGUIs[col].setUpFightCell(row, col, board);
+        setUpFightCell(col: number, board: FightBoard) {
+            this._cellGUIs[col].setUpFightCell(board);
         }
     }
     
@@ -1069,7 +1149,7 @@ namespace ActionBarGUIs {
         setUpFightBoard(fightInstance: FightInstance) {
             fightInstance.fightBoard.baseLayer.forEach(
                 (e, row) => e.forEach(
-                    (tile, col) => this._rowGUIs[row].setUpFightCell(row, col, fightInstance.fightBoard)
+                    (tile, col) => this._rowGUIs[row].setUpFightCell(col, fightInstance.fightBoard)
                 )
             );
         }
@@ -1110,7 +1190,7 @@ namespace ActionBarGUIs {
                 let left: number = c_obj._div.getBoundingClientRect().left - 8;
                 let top: number = c_obj._div.getBoundingClientRect().top - 52;
                 c_obj.setUpDragObject(left, top);
-                DragAPI.startDrag(ActionListElementGUI._dragObjType, c_obj.action.save(), e);
+                DragAPI.startDrag(ActionListElementGUI._dragObjType, c_obj.action.save(), e, true);
             }
         }
         setUpDragObject(left: number, top: number): void {
@@ -1576,7 +1656,15 @@ class DragAPI {
     static canDropHere(dragObjType:string): boolean {
         if(this._dragging) {
             if(this._releasableDrag) {
-                return true;
+                if(this._insideDragDestArea) {
+                    if(this._dragObjType != dragObjType) {
+                        return false;
+                    }
+                    return true;
+                }
+                else {
+                    return true;
+                }
             }
             else {
                 return this._insideDragDestArea && this._dragObjType == dragObjType;
@@ -1659,11 +1747,17 @@ class DragAPI {
         this._dragObj.moveWithMouse(e);
     }
     static setUpEventListeners(): void {
-        DragAPI._body.addEventListener('mousemove', (e: MouseEvent) => DragAPI.onMouseMove(e))
+        DragAPI._body.addEventListener('mousemove', (e: MouseEvent) => DragAPI.onMouseMove(e));
+        DragAPI._body.addEventListener('mouseup', (e: MouseEvent) => DragAPI.onMouseUp(e));
     }
     private static onMouseMove(e: MouseEvent): void {
         if(this.dragging) {
             DragAPI._dragObj.moveWithMouse(e);
+        }
+    }
+    private static onMouseUp(e: MouseEvent): void {
+        if(this._releasableDrag && !this._insideDragDestArea) {
+            this.endDrag();
         }
     }
 }
@@ -1699,6 +1793,7 @@ class FightScreenGUI {
     setUpFight(fightInstance: FightInstance) {
         this._infoBarGUI.setUpEnemiesGUI(fightInstance);
         this._actionBarGUI.setUpFightBoard(fightInstance);
+        this._actionPlanBarGUI.setUpFight(fightInstance);
     }
     private onMouseMove(e: MouseEvent, c_obj: FightScreenGUI): void {
         if(DragAPI.dragging) {
@@ -1711,6 +1806,8 @@ class FightScreenGUI {
     }
 }
 
+/*                                      Controllers                                                 */
+
 class FightScreenController {
     static _fightScreenGUI: FightScreenGUI;
     private static _initialized: boolean = false;
@@ -1722,7 +1819,7 @@ class FightScreenController {
         this._initialized = true;
         this._fightScreenGUI = new FightScreenGUI();
     }
-    static startFight(fightInstance: FightInstance): void {
+    static setUpFight(fightInstance: FightInstance): void {
         this._fightInstance = fightInstance;
         this._fightScreenGUI.setUpFight(this._fightInstance);
     }
@@ -1730,9 +1827,13 @@ class FightScreenController {
 
 class GameController {
     private static _initialized: boolean = false;
+    private static _player: Player;
 
     static getEnemyByName(name: string): Enemy.Enemy {
         return Enemy.enemies[name];
+    }
+    static get player(): Player {
+        return this._player;
     }
 
     private static initAPIs() {
@@ -1747,11 +1848,14 @@ class GameController {
         }
         this.initAPIs();
         this.initControllers();
+        this._player = new Player(new EntityStats(10, new ElementalAttributes(), new ElementalAttributes(3), new ElementalAttributes()), 2, 1);
     }
 }
+
+/*                                      Initialization and other stuff                                                 */
 
 GameController.init();
 
 let f = new Fight(['Goblin'], new FightBoardTemplate(new PassableTile("#005000"), [new TileWithPosition(1, 1, new EnemyTile())]));
-let fI = f.createFightInstance(1);
-FightScreenController.startFight(fI);
+let fI = f.createFightInstance(1, GameController.player, [5,5]);
+FightScreenController.setUpFight(fI);
