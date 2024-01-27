@@ -57,7 +57,7 @@ var Enemy;
         constructor(attributes, modifiers) {
             this._modifiers = [];
             this._attributes = attributes.copy();
-            modifiers.forEach(e => this._modifiers.push(e));
+            modifiers.forEach((e) => this._modifiers.push(e));
         }
         copy() {
             return new EnemyBody(this._attributes, this._modifiers);
@@ -116,7 +116,10 @@ var Enemy;
             this._levels = new Map();
             this._name = name;
             this._desc = desc;
-            levels.forEach((e, k) => { e.enemyInfo = this.getInfo(); this._levels.set(k, e.copy()); });
+            levels.forEach((e, k) => {
+                e.enemyInfo = this.getInfo();
+                this._levels.set(k, e.copy());
+            });
             this._scaling = scaling == undefined ? undefined : scaling.copy();
         }
         copy() {
@@ -130,10 +133,10 @@ var Enemy;
                 }
                 else {
                     /*Cases:
-                        I:      There is an enemy with lower level and scaling     -> Scale enemy from lower level
-                        II:     There is an enemy with higher level and no scaling -> Get enemy from higher level
-                        III:    There is no enemy with higher level and no scaling -> Throw error
-                    */
+                                  I:      There is an enemy with lower level and scaling     -> Scale enemy from lower level
+                                  II:     There is an enemy with higher level and no scaling -> Get enemy from higher level
+                                  III:    There is no enemy with higher level and no scaling -> Throw error
+                              */
                     let tempLevels = [];
                     for (const level of this._levels.keys()) {
                         tempLevels.push(level);
@@ -145,7 +148,7 @@ var Enemy;
                     }
                     else {
                         let higher = undefined;
-                        tempLevels.forEach(e => {
+                        tempLevels.forEach((e) => {
                             if (e > level) {
                                 if (higher == undefined) {
                                     higher = e;
@@ -171,12 +174,362 @@ var Enemy;
     }
     Enemy_1.Enemy = Enemy;
     Enemy_1.enemies = {
-        'Goblin': new Enemy('Goblin', 'Stinky and foul looking, these creatures are not the bestest fighters.', new Map([
-            [1, new EnemyWithLevel(new EnemyBody(new EntityStats(10, new ElementalAttributes(), new ElementalAttributes(3), new ElementalAttributes()), []), 1)]
+        Goblin: new Enemy("Goblin", "Stinky and foul looking, these creatures are not the bestest fighters.", new Map([
+            [
+                1,
+                new EnemyWithLevel(new EnemyBody(new EntityStats(10, new ElementalAttributes(), new ElementalAttributes(3), new ElementalAttributes()), []), 1),
+            ],
         ])),
     };
 })(Enemy || (Enemy = {}));
 /*                                      Underlying Classes */
+class Pos {
+    constructor(x, y) {
+        this.x = x;
+        this.y = y;
+    }
+    add(pos) {
+        let p = new Pos(this.x, this.y);
+        p.x += pos.x;
+        p.y += pos.y;
+        return p;
+    }
+    sub(pos) {
+        let p = new Pos(this.x, this.y);
+        p.x -= pos.x;
+        p.y -= pos.y;
+        return p;
+    }
+    // rotate from left to right around O(0,0)
+    rotateLeft() {
+        let y = this.y;
+        this.y = -this.x;
+        this.x = y;
+    }
+}
+var Action;
+(function (Action_1) {
+    let Direction;
+    (function (Direction) {
+        Direction[Direction["up"] = 0] = "up";
+        Direction[Direction["right"] = 1] = "right";
+        Direction[Direction["down"] = 2] = "down";
+        Direction[Direction["left"] = 3] = "left";
+    })(Direction || (Direction = {}));
+    function addDirections(d1, d2) {
+        return d1 + d2 > 3 ? d1 + d2 - 4 : d1 + d2;
+    }
+    class PlayerAction {
+        constructor(name, pattern) {
+            this._name = name;
+            this._pattern = pattern;
+        }
+        get name() {
+            return this._name;
+        }
+        get pattern() {
+            return this._pattern;
+        }
+        save() {
+            return this._name;
+        }
+        load(save) {
+            this._name = save;
+        }
+    }
+    Action_1.PlayerAction = PlayerAction;
+    class Action {
+        constructor(color) {
+            this.color = color;
+        }
+    }
+    class MoveAction extends Action {
+        constructor() {
+            super("#FFFF00");
+        }
+    }
+    class AttackAction extends Action {
+        constructor(attack) {
+            super("#FF0000");
+            this._attack = attack;
+        }
+    }
+    class Connection {
+        constructor(pos, direction = Direction.up) {
+            this.direction = direction;
+            this.pos = pos;
+        }
+    }
+    // A position with a type annotation to figure out what each coordinate means
+    class AnnotatedPos {
+        constructor(annotation, pos) {
+            this.annotation = annotation;
+            this.pos = pos;
+        }
+        add(pos) {
+            let ap = new AnnotatedPos(this.annotation, this.pos.add(pos));
+            return ap;
+        }
+    }
+    // Describes different pattern pieces
+    class PatternPiece {
+        /**
+         * Returns the elements of an arc to be used in a pattern piece
+         * @param radius An integer representing the radius of the arc with which to draw a half-circle; must be a positive integer
+         * @param annotation The annotation of the elements to be used
+         * @returns The list of annotated positions making up the arc
+         */
+        static GetArcElements(radius, annotation) {
+            let positions = [
+                new AnnotatedPos(annotation, new Pos(0, radius)),
+            ];
+            for (let i = 1; i < radius; i++) {
+                positions.push(new AnnotatedPos(annotation, new Pos(-i, radius - i)));
+                positions.push(new AnnotatedPos(annotation, new Pos(i, radius - i)));
+            }
+            return positions;
+        }
+        /**
+         *
+         * Returns a pattern piece centered on startingPos with provided connections
+         * @param radius An integer representing the radius of the arc with which to draw a half-circle; must be a positive integer
+         * @param annotation The annotation of the elements to be used
+         * @param connections Default: []
+         * @param startingPos Default: Pos(0, 0)
+         * @returns
+         */
+        static GetArc(radius, annotation, connections = [], startingPos = new Pos(0, 0)) {
+            let elements = this.GetArcElements(radius, annotation);
+            return new PatternPiece(elements, connections, startingPos);
+        }
+        /**
+         * Return the elements needed to create a line shaped pattern piece
+         * @param length The length of the line; must be a non-zero positive integer
+         * @param annotation The annotation of the elements to be used
+         * @param favor_right If true, in case of an even length, the extra element will be added to the right, else it will be added to the left
+         */
+        static GetSymmetricLineElements(length, annotation, favor_right = false) {
+            let positions = [
+                new AnnotatedPos(annotation, new Pos(0, 0)),
+            ];
+            for (let i = 1; i < length; i++) {
+                if (i % 2 == 1) {
+                    if (favor_right) {
+                        positions.push(new AnnotatedPos(annotation, new Pos((i + 1) / 2, 0)));
+                    }
+                    else {
+                        positions.push(new AnnotatedPos(annotation, new Pos(-(i + 1) / 2, 0)));
+                    }
+                }
+                else {
+                    if (favor_right) {
+                        positions.push(new AnnotatedPos(annotation, new Pos(-(i + 1) / 2, 0)));
+                    }
+                    else {
+                        positions.push(new AnnotatedPos(annotation, new Pos((i + 1) / 2, 0)));
+                    }
+                }
+            }
+            return positions;
+        }
+        /**
+         * Return a line shaped pattern piece
+         * @param length The length of the line; must be a non-zero positive integer
+         * @param annotation The annotation of the elements to be used
+         * @param favor_right If true, in case of an even length, the extra element will be added to the right, else it will be added to the left
+         * @param connections Default: []
+         * @param startingPos Default: Pos(0, 0)
+         */
+        static GetSymmetricLine(length, annotation, favor_right = false, connections = [], startingPos = new Pos(0, 0)) {
+            let elements = this.GetSymmetricLineElements(length, annotation, favor_right);
+            return new PatternPiece(elements, connections, startingPos);
+        }
+        constructor(elements, connections = [], startingPos = new Pos(0, 0)) {
+            this.connections = connections;
+            this.elements = elements;
+            this.startingPos = startingPos;
+        }
+        getCurrentOccupiedSpaces(offset) {
+            return this.elements.map((value) => value.add(offset.add(this.startingPos)));
+        }
+        // in-place left-to-right rotation
+        rotateLeft() {
+            this.elements.forEach((element) => {
+                element.pos.rotateLeft();
+            });
+            this.connections.forEach((connection) => {
+                connection.pos.rotateLeft();
+            });
+            this.startingPos.rotateLeft();
+        }
+    }
+    class OptionalGroupPiece extends PatternPiece {
+    }
+    // Made out of multiple pattern pieces placed on strategic locations
+    class SubPattern {
+        constructor(patternPieces) {
+            this.direction = Direction.up;
+            this.patternPieces = patternPieces;
+        }
+        getCurrentOccupiedSpaces(startPos) {
+            return this.patternPieces
+                .map((value) => value.getCurrentOccupiedSpaces(startPos))
+                .reduce((prev, current) => prev.concat(current));
+        }
+        getConnections() {
+            return this.patternPieces
+                .map((value) => value.connections)
+                .reduce((prev, current) => prev.concat(current));
+        }
+        rotateLeft() {
+            this.patternPieces.forEach((piece) => piece.rotateLeft());
+            this.direction = addDirections(this.direction, 1);
+        }
+        rotateBy(dir) {
+            for (let i = 0; i < dir; i++) {
+                this.rotateLeft();
+            }
+            return this;
+        }
+        rotateTo(dir) {
+            while (this.direction != dir) {
+                this.rotateLeft();
+            }
+            return this;
+        }
+    }
+    // Used to chain multiple sub-patterns together, one after the other in connection points
+    class Pattern {
+        constructor(subPatterns) {
+            this.currentStep = 1;
+            this.chosenConnections = [0];
+            this.subPatterns = [
+                new SubPattern([
+                    new PatternPiece([], [
+                        new Connection(new Pos(0, 1), Direction.up),
+                        new Connection(new Pos(1, 0), Direction.right),
+                        new Connection(new Pos(0, -1), Direction.down),
+                        new Connection(new Pos(-1, 0), Direction.left),
+                    ]),
+                ]),
+            ].concat(subPatterns);
+        }
+        getCurrentSubPattern() {
+            return this.subPatterns[this.currentStep];
+        }
+        getNextSubPattern() {
+            return this.subPatterns[this.currentStep + 1];
+        }
+        getCurrentConnections() {
+            return this.subPatterns[this.currentStep - 1].getConnections();
+        }
+        getConnections(index) {
+            return this.subPatterns[index].getConnections();
+        }
+        /**
+         * Take the next step in the pattern
+         * @param pos Choose the closest connection to pos
+         * @returns true if a new step could be taken, false otherwise
+         */
+        nextStep(pos) {
+            if (this.currentStep + 1 < this.subPatterns.length) {
+                this.currentStep++;
+                this.chosenConnections.push(0);
+                this.chooseClosesConnection(pos);
+                return true;
+            }
+            return false;
+        }
+        /**
+         * Go back a step in the
+         * @param pos Choose the closest connection to pos
+         * @returns true if a previous step could be taken, false otherwise
+         */
+        prevStep(pos) {
+            if (this.currentStep > 1) {
+                this.currentStep--;
+                this.chosenConnections.pop();
+                this.chooseClosesConnection(pos);
+                return true;
+            }
+            return false;
+        }
+        getCurrentOccupiedSpaces(startPos) {
+            let dir = Direction.up;
+            return this.subPatterns
+                .slice(1)
+                .map((value, i) => {
+                if (i < this.currentStep) {
+                    dir = addDirections(dir, this.getConnections(i)[this.chosenConnections[i]].direction);
+                    value.rotateTo(dir);
+                    startPos = startPos.add(this.getConnections(i)[this.chosenConnections[i]].pos);
+                    let to_ret = value.getCurrentOccupiedSpaces(startPos);
+                    return to_ret;
+                }
+                else {
+                    return [];
+                }
+            })
+                .reduce((prev, current) => prev.concat(current));
+        }
+        getClosestConnection(pos) {
+            let dists = this.getCurrentConnections().map((value) => {
+                let x = -pos.x + value.pos.x;
+                let y = -pos.y + value.pos.y;
+                return x * x + y * y;
+            });
+            let min = dists[0];
+            let min_i = 0;
+            for (let i = 1; i < dists.length; i++) {
+                if (dists[i] < min) {
+                    min_i = i;
+                    min = dists[i];
+                }
+            }
+            return min_i;
+        }
+        chooseConnection(i) {
+            this.chosenConnections.pop();
+            this.chosenConnections.push(i);
+        }
+        chooseClosesConnection(pos) {
+            this.chooseConnection(this.getClosestConnection(pos));
+        }
+    }
+    // A pattern where each cell is mapped to an action
+    class ActionPattern {
+        constructor(pattern, actions) {
+            this.pattern = pattern;
+            this.actions = actions;
+        }
+        getCurrentOccupiedSpaces(startPos) {
+            return this.pattern.getCurrentOccupiedSpaces(startPos);
+        }
+        chooseClosesConnection(pos) {
+            this.pattern.chooseClosesConnection(pos);
+        }
+        nextStep(pos) {
+            return this.pattern.nextStep(pos);
+        }
+        prevStep(pos) {
+            return this.pattern.prevStep(pos);
+        }
+    }
+    Action_1.player_actions = [
+        new PlayerAction("Move", new ActionPattern(new Pattern([
+            new SubPattern([
+                new PatternPiece([new AnnotatedPos("m", new Pos(0, 0))]),
+            ]),
+        ]), new Map([["m", new MoveAction()]]))),
+        new PlayerAction("Attack", new ActionPattern(new Pattern([
+            new SubPattern([
+                new PatternPiece([new AnnotatedPos("a", new Pos(0, 0))]),
+            ]),
+        ]), new Map([
+            ["a", new AttackAction(new ElementalAttributes(1))],
+        ]))),
+    ];
+})(Action || (Action = {}));
 var CardManaTypes;
 (function (CardManaTypes) {
     CardManaTypes[CardManaTypes["neutral"] = 0] = "neutral";
@@ -254,21 +607,21 @@ class Deck {
         this._nextCard = MathUtil.getRandomIntBelow(this._cards.length);
     }
     pushAll(cList) {
-        cList.forEach(element => {
+        cList.forEach((element) => {
             this._cards.push(element.copy);
         });
     }
     setContent(oDeck) {
         this.reset();
-        oDeck.cards.forEach(element => {
+        oDeck.cards.forEach((element) => {
             this._cards.push(element.copy);
         });
         this.afterDeckRepopulation();
     }
     setContentSuitsValuesMana(suits, values, manaType = CardManaTypes.neutral) {
         this.reset();
-        suits.forEach(s => {
-            values.forEach(v => {
+        suits.forEach((s) => {
+            values.forEach((v) => {
                 this._cards.push(new Card(s, v, manaType));
             });
         });
@@ -284,16 +637,38 @@ class Deck {
         return next;
     }
     toString() {
-        return this.cards.map(c => c.toString()).reduce((a, s) => a += s + "|", "").slice(0, -1);
+        return this.cards
+            .map((c) => c.toString())
+            .reduce((a, s) => (a += s + "|"), "")
+            .slice(0, -1);
     }
     get copy() {
         let d = new Deck();
-        d.pushAll(this._cards.map(c => c.copy).reduce((a, c) => { a.push(c); return a; }, new Array()));
+        d.pushAll(this._cards
+            .map((c) => c.copy)
+            .reduce((a, c) => {
+            a.push(c);
+            return a;
+        }, new Array()));
         return d;
     }
 }
-Deck.suits = ['♣', '♦', '♥', '♠'];
-Deck.values = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'A', 'J', 'Q', 'K'];
+Deck.suits = ["♣", "♦", "♥", "♠"];
+Deck.values = [
+    "2",
+    "3",
+    "4",
+    "5",
+    "6",
+    "7",
+    "8",
+    "9",
+    "10",
+    "A",
+    "J",
+    "Q",
+    "K",
+];
 class Hand {
     constructor(cards = []) {
         this._cards = cards;
@@ -305,8 +680,16 @@ class Hand {
     get value() {
         //return the numeric value of the hand
         let value;
-        value = this._cards.map(c => c.value == 'A' ? 11 : (c.value == 'J' || c.value == 'Q' || c.value == 'K' ? 10 : Number(c.value))).reduce((a, n) => a + n, 0);
-        let nr_aces = this._cards.map(c => c.value == 'A' ? 1 : 0).reduce((a, n) => a + n, 0);
+        value = this._cards
+            .map((c) => c.value == "A"
+            ? 11
+            : c.value == "J" || c.value == "Q" || c.value == "K"
+                ? 10
+                : Number(c.value))
+            .reduce((a, n) => a + n, 0);
+        let nr_aces = this._cards
+            .map((c) => (c.value == "A" ? 1 : 0))
+            .reduce((a, n) => a + n, 0);
         while (value > 21 && nr_aces > 0) {
             nr_aces -= 1;
             value -= 10;
@@ -343,13 +726,17 @@ class Hand {
 }
 class PassableTile {
     get type() {
-        return 'PassableTile';
+        return "PassableTile";
     }
     constructor(backgroundColor) {
         this._backgroundColor = backgroundColor;
     }
-    repr(contentRepr = '') {
-        return "<div style=\"background-color: " + this._backgroundColor + "; width: 100%; height: 100%\">" + contentRepr + "</div>";
+    repr(contentRepr = "") {
+        return ('<div style="background-color: ' +
+            this._backgroundColor +
+            '; width: 100%; height: 100%">' +
+            contentRepr +
+            "</div>");
     }
     copy() {
         return new PassableTile(this._backgroundColor);
@@ -357,7 +744,7 @@ class PassableTile {
 }
 class EnemyTile {
     get type() {
-        return 'EnemyTile';
+        return "EnemyTile";
     }
     get backgroundTile() {
         return this._backgroundTile;
@@ -373,7 +760,7 @@ class EnemyTile {
             throw "ERROR: Cannot set background tile of EnemyTile when it is not unknown!";
         }
     }
-    repr(contentRepr = '') {
+    repr(contentRepr = "") {
         return this._backgroundTile.repr(contentRepr);
     }
     copy() {
@@ -409,7 +796,9 @@ class FightBoardTemplate {
     constructor(defTile, tiles = []) {
         this._tiles = [];
         this._defTile = defTile;
-        tiles.forEach(e => { this._tiles.push(e.copy()); });
+        tiles.forEach((e) => {
+            this._tiles.push(e.copy());
+        });
     }
     copy() {
         return new FightBoardTemplate(this._defTile, this._tiles);
@@ -445,10 +834,10 @@ class FightBoard {
                 templated[i].push(false);
             }
         }
-        template.tiles.forEach(e => {
+        template.tiles.forEach((e) => {
             this._baseLayer[e.row][e.col] = e.tile.copy();
             templated[e.row][e.col] = true;
-            if (e.tile.type == 'EnemyTile') {
+            if (e.tile.type == "EnemyTile") {
                 this._enemySpawnTiles.push([e.row, e.col]);
                 let t = e.tile;
                 if (t.backgroundTile == undefined) {
@@ -466,12 +855,13 @@ class FightBoard {
         }
     }
     setUpEnemies(enemies) {
-        enemies.forEach(e => {
+        enemies.forEach((e) => {
             let r = MathUtil.getRandomIntBelow(this._enemySpawnTiles.length);
             let place = this._enemySpawnTiles[r];
             this._enemyLayer[place[0]][place[1]] = e;
             e.pos = place;
-            this._enemySpawnTiles[r] = this._enemySpawnTiles[this._enemySpawnTiles.length - 1];
+            this._enemySpawnTiles[r] =
+                this._enemySpawnTiles[this._enemySpawnTiles.length - 1];
             this._enemySpawnTiles.pop();
         });
     }
@@ -480,9 +870,6 @@ class FightBoard {
     }
 }
 class Player {
-    get pos() {
-        return this._pos;
-    }
     get nrActions() {
         return this._nrActions;
     }
@@ -491,9 +878,6 @@ class Player {
     }
     get baseStats() {
         return this._baseStats;
-    }
-    set pos(position) {
-        this._pos = position;
     }
     // set nrActions(nr: number) {
     //     this._nrActions = nr;
@@ -506,28 +890,17 @@ class Player {
         this._nrDecks = nrDecks;
     }
 }
-class Action {
-    constructor(name) {
-        this._name = name;
+class FightPlayer {
+    get player() {
+        return this._player;
     }
-    get name() {
-        return this._name;
+    get actions() {
+        return this._actions;
     }
-    save() {
-        return this._name;
-    }
-    load(save) {
-        let i = 0;
-        let s_list = save.split("\\e\\");
-        this._name = s_list[i];
-        i++;
-    }
-}
-class MoveAction extends Action {
-    static load(save) {
-        let a = new MoveAction('');
-        a.load(save);
-        return a;
+    constructor(player) {
+        this._actionsTaken = [];
+        this._player = player;
+        this._actions = Action.player_actions;
     }
 }
 class FightInstance {
@@ -546,6 +919,9 @@ class FightInstance {
     get playerPos() {
         return this._playerPos;
     }
+    get playerTempPos() {
+        return this._playerTempPos;
+    }
     setUpFightBoard(width, height, boardTemplate) {
         this._fightBoard = new FightBoard(width, height);
         this._fightBoard.setUpFromTemplate(boardTemplate);
@@ -557,21 +933,21 @@ class FightInstance {
         this._enemies.push(e);
     }
     addPlayer(player, playerPos) {
-        this._player = player;
-        player.pos = playerPos;
+        this._player = new FightPlayer(player);
         this._playerPos = playerPos;
+        this._playerTempPos = new Pos(playerPos.x, playerPos.y);
     }
 }
 class Fight {
     constructor(enemyNames, boardTemplate) {
         this._enemies = [];
-        enemyNames.forEach(e => this._enemies.push(e));
+        enemyNames.forEach((e) => this._enemies.push(e));
         this._boardTemplate = boardTemplate;
     }
     createFightInstance(level, player, playerPos) {
         let fightInstance = new FightInstance();
         //Set up Entities: Enemies and Player
-        this._enemies.forEach(e => fightInstance.addEnemy(GameController.getEnemyByName(e).getEnemyWithLevel(level)));
+        this._enemies.forEach((e) => fightInstance.addEnemy(GameController.getEnemyByName(e).getEnemyWithLevel(level)));
         fightInstance.addPlayer(player, playerPos);
         //Set up the Board
         fightInstance.setUpFightBoard(8, 7, this._boardTemplate);
@@ -581,8 +957,12 @@ class Fight {
 /*                                      GUI                                                 */
 class DraggableGUI {
     moveWithMouse(e) { }
-    get left() { return ""; }
-    get top() { return ""; }
+    get left() {
+        return "";
+    }
+    get top() {
+        return "";
+    }
 }
 var ActionPlanBarGUIs;
 (function (ActionPlanBarGUIs) {
@@ -600,10 +980,10 @@ var ActionPlanBarGUIs;
         }
         update() {
             if (this.card == null) {
-                this._div.style.display = 'none';
+                this._div.style.display = "none";
             }
             else {
-                this._div.style.display = 'block';
+                this._div.style.display = "block";
                 this._div.innerHTML = this.card.value + "<br>" + this.card.suit;
             }
         }
@@ -629,7 +1009,9 @@ var ActionPlanBarGUIs;
             this._cardGUIs = [];
             let path = super_path + ">" + HandGUI._divClass;
             this._div = document.querySelector(path);
-            document.querySelectorAll(path + ">" + CardGUI._divClass).forEach(e => this._cardGUIs.push(new CardGUI(e)));
+            document
+                .querySelectorAll(path + ">" + CardGUI._divClass)
+                .forEach((e) => this._cardGUIs.push(new CardGUI(e)));
             this._hand = new Hand();
             this._tempHand = new Hand();
             this.stylizeDeck();
@@ -653,7 +1035,7 @@ var ActionPlanBarGUIs;
             return this._tempHand.final;
         }
         update() {
-            this._cardGUIs.forEach((e, i) => e.card = this._tempHand.get(i));
+            this._cardGUIs.forEach((e, i) => (e.card = this._tempHand.get(i)));
         }
         addTempCard(card) {
             //visual changes only; change temp hand only
@@ -708,7 +1090,9 @@ var ActionPlanBarGUIs;
             this._action = null;
         }
         update(basedOnTemp = false) {
-            let a = basedOnTemp ? this._tempAction : this._action;
+            let a = basedOnTemp
+                ? this._tempAction
+                : this._action;
             if (a == null) {
                 this._div.innerHTML = "";
             }
@@ -739,28 +1123,39 @@ var ActionPlanBarGUIs;
         }
         setUpEventListeners() {
             let c_obj = this;
-            c_obj._div.addEventListener('mouseenter', (e) => c_obj.onMouseEnter(e, c_obj));
-            c_obj._div.addEventListener('mouseleave', (e) => c_obj.onMouseLeave(e, c_obj));
-            c_obj._div.addEventListener('mouseup', (e) => c_obj.onMouseUp(e, c_obj));
+            c_obj._div.addEventListener("mousedown", (e) => c_obj.onMouseDown(e, c_obj));
+            c_obj._div.addEventListener("mouseenter", (e) => c_obj.onMouseEnter(e, c_obj));
+            c_obj._div.addEventListener("mouseleave", (e) => c_obj.onMouseLeave(e, c_obj));
+            c_obj._div.addEventListener("mouseup", (e) => c_obj.onMouseUp(e, c_obj));
+        }
+        onMouseDown(e, c_obj) {
+            if (e.button == 0 && c_obj._actionGUI.action != null) {
+                ActionBarGUIs.ActionBarAreaGridGUI._self.setUpActionPattern(c_obj._actionGUI.action.name);
+            }
         }
         onMouseEnter(e, c_obj) {
-            if (DragAPI.dragObjectType == DeckGUI._dragObjType && !c_obj._handGUI.busted) {
+            if (DragAPI.dragObjectType == DeckGUI._dragObjType &&
+                !c_obj._handGUI.busted) {
                 c_obj._handGUI.addTempCard(Card.load(DragAPI.dragObjectData));
                 c_obj.update();
                 DragAPI.enterDragDestinationArea();
             }
-            else if (DragAPI.dragObjectType == ActionBarGUIs.ActionListElementGUI._dragObjType) {
-                c_obj._actionGUI.tempAction = Action.load(DragAPI.dragObjectData);
+            else if (DragAPI.dragObjectType ==
+                ActionBarGUIs.ActionListElementGUI._dragObjType) {
+                c_obj._actionGUI.tempAction = Action.player_actions.find((action) => action.name == DragAPI.dragObjectData);
                 DragAPI.enterDragDestinationArea();
             }
         }
         onMouseLeave(e, c_obj) {
-            if (DragAPI.dragObjectType == DeckGUI._dragObjType && DragAPI.insideDragDestinationArea) {
+            if (DragAPI.dragObjectType == DeckGUI._dragObjType &&
+                DragAPI.insideDragDestinationArea) {
                 c_obj._handGUI.removeTempCard();
                 c_obj.update();
                 DragAPI.exitDragDestinationArea();
             }
-            else if (DragAPI.dragObjectType == ActionBarGUIs.ActionListElementGUI._dragObjType && DragAPI.insideDragDestinationArea) {
+            else if (DragAPI.dragObjectType ==
+                ActionBarGUIs.ActionListElementGUI._dragObjType &&
+                DragAPI.insideDragDestinationArea) {
                 c_obj._actionGUI.removeTemp();
                 DragAPI.exitDragDestinationArea();
             }
@@ -782,16 +1177,16 @@ var ActionPlanBarGUIs;
             this._actionGUI.update();
             let value = this._handGUI.tempValue;
             if (value < 14) {
-                this._div.style.border = 'dashed red 5px';
+                this._div.style.border = "dashed red 5px";
             }
             else if (value < 21) {
-                this._div.style.border = 'dashed green 5px';
+                this._div.style.border = "dashed green 5px";
             }
             else if (value == 21) {
-                this._div.style.border = 'solid green 5px';
+                this._div.style.border = "solid green 5px";
             }
             else {
-                this._div.style.border = 'solid red 5px';
+                this._div.style.border = "solid red 5px";
             }
         }
         show() {
@@ -834,45 +1229,64 @@ var ActionPlanBarGUIs;
         setUpDragObject(left, top, card) {
             let styleSheet = getComputedStyle(this._div);
             let styleNeeded = new Map();
-            DeckGUI._dragProperties.forEach((e) => { styleNeeded.set(DragAPI.dragPropertyToCSS(e), styleSheet[e]); });
-            styleNeeded.set('left', left + "px");
-            styleNeeded.set('top', top + "px");
-            styleNeeded.set('display', 'block');
+            DeckGUI._dragProperties.forEach((e) => {
+                styleNeeded.set(DragAPI.dragPropertyToCSS(e), styleSheet[e]);
+            });
+            styleNeeded.set("left", left + "px");
+            styleNeeded.set("top", top + "px");
+            styleNeeded.set("display", "block");
             DragAPI.setUpDragObject(styleNeeded, this.createDragObjectInnerHTML(card));
         }
         createDragObjectInnerHTML(card) {
             return card.HTMLString;
         }
         show() {
-            this._div.style.display = 'grid';
+            this._div.style.display = "grid";
         }
         hide() {
-            this._div.style.display = 'none';
+            this._div.style.display = "none";
         }
         resetFightRound() {
             this.setContentSuitsValuesMana(Deck.suits, Deck.values);
         }
     }
     DeckGUI._divClass = ".deck";
-    DeckGUI._dragObjType = 'card';
-    DeckGUI._dragProperties = ['width', 'height', 'border', 'backgroundColor'];
+    DeckGUI._dragObjType = "card";
+    DeckGUI._dragProperties = [
+        "width",
+        "height",
+        "border",
+        "backgroundColor",
+    ];
     class DeckHolderGUI {
         constructor() {
             this._deckGUIs = [];
             //set up deck GUI's
-            document.querySelectorAll('#FightScreenActionPlanBar' + '>' + DeckHolderGUI._divClass + '>' + DeckGUI._divClass).forEach((e) => { this._deckGUIs.push(new DeckGUI(e)); });
+            document
+                .querySelectorAll("#FightScreenActionPlanBar" +
+                ">" +
+                DeckHolderGUI._divClass +
+                ">" +
+                DeckGUI._divClass)
+                .forEach((e) => {
+                this._deckGUIs.push(new DeckGUI(e));
+            });
             this._deckGUIs[0].setContentSuitsValuesMana(Deck.suits, Deck.values);
             this.update();
         }
         setUpFight(player) {
-            DeckHolderGUI._currentDeckGUIs = player.nrDecks;
+            DeckHolderGUI._currentDeckGUIs = player.player.nrDecks;
             this.update();
         }
         update() {
-            this._deckGUIs.forEach((e, i) => { i < DeckHolderGUI._currentDeckGUIs ? e.show() : e.hide(); });
+            this._deckGUIs.forEach((e, i) => {
+                i < DeckHolderGUI._currentDeckGUIs ? e.show() : e.hide();
+            });
         }
         resetFightRound() {
-            this._deckGUIs.forEach((e, i) => { i < DeckHolderGUI._currentDeckGUIs ? e.resetFightRound() : null; });
+            this._deckGUIs.forEach((e, i) => {
+                i < DeckHolderGUI._currentDeckGUIs ? e.resetFightRound() : null;
+            });
         }
     }
     DeckHolderGUI._divClass = ".deck_holder";
@@ -880,7 +1294,11 @@ var ActionPlanBarGUIs;
     class ActionHolderGUI {
         constructor(superDivID) {
             //set up deck GUI's
-            document.querySelectorAll(superDivID + '>' + ActionSpaceGUI._divClass).forEach((e, i) => { ActionHolderGUI._actionGUIs.push(new ActionSpaceGUI(i.toString())); });
+            document
+                .querySelectorAll(superDivID + ">" + ActionSpaceGUI._divClass)
+                .forEach((e, i) => {
+                ActionHolderGUI._actionGUIs.push(new ActionSpaceGUI(i.toString()));
+            });
             this.update();
         }
         static setFinalAll() {
@@ -897,18 +1315,19 @@ var ActionPlanBarGUIs;
             }
         }
         setUpFight(player) {
-            ActionHolderGUI._currentActionGUIs = player.nrActions;
+            ActionHolderGUI._currentActionGUIs = player.player.nrActions;
             this.update();
         }
         update() {
-            ActionHolderGUI._actionGUIs.forEach((e, i) => { i >= ActionHolderGUI._currentActionGUIs ? e.hide() : e.show(); });
+            ActionHolderGUI._actionGUIs.forEach((e, i) => {
+                i >= ActionHolderGUI._currentActionGUIs ? e.hide() : e.show();
+            });
         }
         resetFightRound() {
             ActionHolderGUI._actionGUIs.forEach((e, i) => {
                 if (i < ActionHolderGUI._currentActionGUIs) {
                     e.resetFightRound();
                 }
-                ;
             });
             ActionHolderGUI.setFinalAll();
         }
@@ -930,7 +1349,7 @@ var ActionPlanBarGUIs;
             this._actionHolderGUI.resetFightRound();
         }
     }
-    ActionPlanBarGUI._divID = '#FightScreenActionPlanBar';
+    ActionPlanBarGUI._divID = "#FightScreenActionPlanBar";
     ActionPlanBarGUI._finalAll = false;
     ActionPlanBarGUIs.ActionPlanBarGUI = ActionPlanBarGUI;
 })(ActionPlanBarGUIs || (ActionPlanBarGUIs = {}));
@@ -948,28 +1367,56 @@ var ActionBarGUIs;
         }
         setUpEventListeners() {
             let c_obj = this;
-            this._div.addEventListener('mouseenter', (e) => c_obj.onMouseEnter(e, c_obj));
-            this._div.addEventListener('mouseleave', (e) => c_obj.onMouseLeave(e, c_obj));
+            this._div.addEventListener("mouseenter", (e) => c_obj.onMouseEnter(e, c_obj));
+            this._div.addEventListener("mouseleave", (e) => c_obj.onMouseLeave(e, c_obj));
+            this._div.addEventListener("mousedown", (e) => {
+                c_obj.onMouseClick(e, c_obj);
+            });
         }
         onMouseEnter(e, c_obj) {
             if (!DragAPI.dragging) {
-                c_obj._div.style.borderColor = 'rgb(0,0,255)';
+                c_obj._div.style.borderColor = "rgb(0,0,255)";
+                ActionBarAreaGridGUI.cursorPos = new Pos(this._col, this._row);
+                ActionBarAreaGridGUI._self.updateActionPattern();
             }
         }
         onMouseLeave(e, c_obj) {
             if (!DragAPI.dragging) {
-                c_obj._div.style.borderColor = 'green';
+                c_obj._div.style.borderColor = "green";
+            }
+        }
+        onMouseClick(e, c_obj) {
+            if (e.button == 0) {
+                ActionBarAreaGridGUI._self.actionPatternNext();
+            }
+            else if (e.button == 2) {
+                ActionBarAreaGridGUI._self.actionPatternPrev();
             }
         }
         setUpFightCell(board) {
-            let innerRepr = '';
-            if (board.enemyLayer[this._row][this._col] != undefined) {
-                innerRepr = "<div>" + board.enemyLayer[this._row][this._col].symbol + "</div>";
+            this._board = board;
+            let innerRepr = "";
+            if (this._board.enemyLayer[this._row][this._col] != undefined) {
+                innerRepr =
+                    "<div>" +
+                        this._board.enemyLayer[this._row][this._col].symbol +
+                        "</div>";
             }
-            else if (board.playerPos[0] == this._row && board.playerPos[1] == this._col) {
+            else if (this._board.playerPos.y == this._row &&
+                this._board.playerPos.x == this._col) {
                 innerRepr = "<div>" + "P" + "</div>";
             }
-            this._div.innerHTML = board.baseLayer[this._row][this._col].repr(innerRepr);
+            this._div.innerHTML =
+                this._board.baseLayer[this._row][this._col].repr(innerRepr);
+        }
+        /**
+         * Reset the looks of the cell to it's original
+         */
+        reset() {
+            this._div.style.borderColor = "green";
+        }
+        setBacgroundColor(color) {
+            this._div.style.borderColor = color;
         }
     }
     AreaGridCellGUI._divClass = ".cell";
@@ -977,14 +1424,30 @@ var ActionBarGUIs;
         static get classFullPath() {
             return ActionBarAreaGridGUI.fullPath + ">" + this._divClass;
         }
+        get cellGUIs() {
+            return this._cellGUIs;
+        }
         constructor(div, nr, offsetInd) {
             this._cellGUIs = [];
             this._div = div;
-            this._div.style.left = (offsetInd * AreaGridRowGUI._rowOffset).toString() + "px";
-            document.querySelectorAll(AreaGridRowGUI.classFullPath + "._" + nr + ">" + AreaGridCellGUI._divClass).forEach((e, i) => this._cellGUIs.push(new AreaGridCellGUI(e, nr, i)));
+            this._div.style.left =
+                (offsetInd * AreaGridRowGUI._rowOffset).toString() + "px";
+            document
+                .querySelectorAll(AreaGridRowGUI.classFullPath +
+                "._" +
+                nr +
+                ">" +
+                AreaGridCellGUI._divClass)
+                .forEach((e, i) => this._cellGUIs.push(new AreaGridCellGUI(e, nr, i)));
         }
         setUpFightCell(col, board) {
             this._cellGUIs[col].setUpFightCell(board);
+        }
+        /**
+         * Reset row of cells to original looks
+         */
+        reset() {
+            this._cellGUIs.forEach((cellGUI) => cellGUI.reset());
         }
     }
     AreaGridRowGUI._divClass = ".row";
@@ -995,19 +1458,77 @@ var ActionBarGUIs;
         }
         constructor() {
             this._rowGUIs = [];
+            this._fightInstance = undefined;
+            this._playerAction = undefined;
             if (ActionBarAreaGridGUI._nrInstances > 0) {
                 throw "ActionBarAreaGridGUI already has an instance running!";
             }
             ActionBarAreaGridGUI._nrInstances += 1;
+            ActionBarAreaGridGUI._self = this;
             this._div = document.getElementById(ActionBarAreaGridGUI._divID);
-            document.querySelectorAll(AreaGridRowGUI.classFullPath).forEach((e, i, l) => { this._rowGUIs.push(new AreaGridRowGUI(e, i, l.length - i - 1)); });
+            document
+                .querySelectorAll(AreaGridRowGUI.classFullPath)
+                .forEach((e, i, l) => {
+                this._rowGUIs.push(new AreaGridRowGUI(e, i, l.length - i - 1));
+            });
         }
         setUpFightBoard(fightInstance) {
             fightInstance.fightBoard.baseLayer.forEach((e, row) => e.forEach((tile, col) => this._rowGUIs[row].setUpFightCell(col, fightInstance.fightBoard)));
+            this._fightInstance = fightInstance;
+        }
+        /**
+         * Reset board to original looks
+         */
+        reset() {
+            this._rowGUIs.forEach((rowGUI) => rowGUI.reset());
+        }
+        setUpActionPattern(actionName) {
+            this._playerAction = this._fightInstance.player.actions.find((action) => action.name == actionName);
+            this.displayActionPattern();
+        }
+        displayActionPattern() {
+            if (this._playerAction != undefined) {
+                this.reset();
+                this._playerAction.pattern.pattern
+                    .getCurrentOccupiedSpaces(this._fightInstance.playerTempPos)
+                    .forEach((element) => {
+                    this._rowGUIs[element.pos.y].cellGUIs[element.pos.x].setBacgroundColor(this._playerAction.pattern.actions.get(element.annotation).color);
+                });
+            }
+        }
+        updateActionPattern() {
+            if (this._playerAction != undefined) {
+                this._playerAction.pattern.chooseClosesConnection(ActionBarAreaGridGUI.cursorPos.sub(this._fightInstance.playerTempPos));
+                this.displayActionPattern();
+            }
+        }
+        tearDownActionPattern() {
+            this._playerAction = undefined;
+            this.reset();
+        }
+        // TODO: Implement this
+        finalizeActionPattern() {
+            this._playerAction = undefined;
+        }
+        actionPatternNext() {
+            if (this._playerAction != undefined) {
+                if (!this._playerAction.pattern.nextStep(this._fightInstance.playerTempPos)) {
+                    this.finalizeActionPattern();
+                }
+            }
+        }
+        actionPatternPrev() {
+            if (this._playerAction != undefined) {
+                if (!this._playerAction.pattern.prevStep(this._fightInstance.playerTempPos)) {
+                    this.tearDownActionPattern();
+                }
+            }
         }
     }
     ActionBarAreaGridGUI._divID = "FSActionBarAreaGrid";
     ActionBarAreaGridGUI._nrInstances = 0;
+    ActionBarAreaGridGUI.cursorPos = new Pos(0, 0);
+    ActionBarGUIs.ActionBarAreaGridGUI = ActionBarAreaGridGUI;
     class ActionListElementGUI {
         get action() {
             return this._action;
@@ -1022,7 +1543,7 @@ var ActionBarGUIs;
         }
         setUpEventListeners() {
             let c_obj = this;
-            this._div.addEventListener('mousedown', (e) => c_obj.onMouseDown(e, c_obj));
+            this._div.addEventListener("mousedown", (e) => c_obj.onMouseDown(e, c_obj));
         }
         display() {
             this._div.innerHTML = this.repr();
@@ -1031,7 +1552,10 @@ var ActionBarGUIs;
             return this._action != null ? this._action.name : "";
         }
         setHeight(height) {
-            this._div.style.height = (height - 2 * Number(getComputedStyle(this._div).borderWidth.slice(0, -2))) + "px";
+            this._div.style.height =
+                height -
+                    2 * Number(getComputedStyle(this._div).borderWidth.slice(0, -2)) +
+                    "px";
         }
         onMouseDown(e, c_obj) {
             if (!DragAPI.dragging && c_obj.action != null) {
@@ -1044,9 +1568,11 @@ var ActionBarGUIs;
         setUpDragObject(left, top) {
             let styleSheet = getComputedStyle(this._div);
             let styleNeeded = new Map();
-            ActionListElementGUI._dragProperties.forEach((e) => { styleNeeded.set(DragAPI.dragPropertyToCSS(e), styleSheet[e]); });
-            styleNeeded.set('left', left + "px");
-            styleNeeded.set('top', top + "px");
+            ActionListElementGUI._dragProperties.forEach((e) => {
+                styleNeeded.set(DragAPI.dragPropertyToCSS(e), styleSheet[e]);
+            });
+            styleNeeded.set("left", left + "px");
+            styleNeeded.set("top", top + "px");
             DragAPI.setUpDragObject(styleNeeded, this.createDragObjectInnerHTML());
         }
         createDragObjectInnerHTML() {
@@ -1055,7 +1581,13 @@ var ActionBarGUIs;
     }
     ActionListElementGUI._elementClass = ".action_list_element";
     ActionListElementGUI._dragObjType = "action";
-    ActionListElementGUI._dragProperties = ['width', 'height', 'border', 'backgroundColor', 'display'];
+    ActionListElementGUI._dragProperties = [
+        "width",
+        "height",
+        "border",
+        "backgroundColor",
+        "display",
+    ];
     ActionBarGUIs.ActionListElementGUI = ActionListElementGUI;
     class ActionListGUI {
         constructor(div, elementsPerPage) {
@@ -1068,7 +1600,7 @@ var ActionBarGUIs;
         set elementsPerPage(nr) {
             if (nr != this._listElements.length) {
                 while (this._listElements.length < nr) {
-                    let newDiv = document.createElement('div');
+                    let newDiv = document.createElement("div");
                     newDiv.classList.add(ActionListElementGUI._elementClass.slice(1));
                     this._div.appendChild(newDiv);
                     this._listElements.push(new ActionListElementGUI(newDiv));
@@ -1077,7 +1609,7 @@ var ActionBarGUIs;
                     this._listElements.pop();
                 }
                 let height = this._div.clientHeight / this._listElements.length;
-                this._listElements.forEach((e) => (e.setHeight(height)));
+                this._listElements.forEach((e) => e.setHeight(height));
                 this.update();
             }
         }
@@ -1089,6 +1621,9 @@ var ActionBarGUIs;
         }
         get nrPages() {
             return Math.ceil(this._elements.length / this.elementsPerPage);
+        }
+        set elements(actions) {
+            this._elements = actions;
         }
         nextPage() {
             if (this.currentPage < this.nrPages) {
@@ -1108,7 +1643,9 @@ var ActionBarGUIs;
         update() {
             let offsetInd = this._currentPage * this.elementsPerPage;
             this._listElements.forEach((e, i) => {
-                i + offsetInd < this._elements.length ? e.action = this._elements[i + offsetInd] : e.action = null;
+                i + offsetInd < this._elements.length
+                    ? (e.action = this._elements[i + offsetInd])
+                    : (e.action = null);
             });
         }
     }
@@ -1121,13 +1658,12 @@ var ActionBarGUIs;
                 throw "InfoBarGUI already has an instance running!";
             }
             ActionBarGUI._nrInstances += 1;
+            ActionBarGUI._self = this;
             this._div = document.getElementById(ActionBarGUI._divID);
             this._spellActionList = new ActionListGUI(document.getElementById(ActionBarGUI._spellListID), ActionBarGUI._nrElementsPerList);
             this._areaGridGUI = new ActionBarAreaGridGUI();
             this._otherActionList = new ActionListGUI(document.getElementById(ActionBarGUI._otherListID), ActionBarGUI._nrElementsPerList);
-            this._otherActionList.addToEnd(new Action('A'));
-            this._otherActionList.addToEnd(new Action('B'));
-            this._otherActionList.addToEnd(new Action('C'));
+            this._otherActionList.elements = Action.player_actions;
             this.update();
         }
         update() {
@@ -1155,8 +1691,7 @@ var InfoBarGUIs;
             InfoBarStatusBarsGUI._nrInstances += 1;
             this._div = document.getElementById(InfoBarStatusBarsGUI._divID);
         }
-        resetFightRound() {
-        }
+        resetFightRound() { }
     }
     InfoBarStatusBarsGUI._divID = "FSInfoBarStatusBars";
     InfoBarStatusBarsGUI._nrInstances = 0;
@@ -1186,7 +1721,7 @@ var InfoBarGUIs;
         }
         hide() {
             this.updateGUI();
-            this._div.style.display = 'none';
+            this._div.style.display = "none";
         }
         updateGUI() {
             if (this._enemy == undefined) {
@@ -1215,7 +1750,7 @@ var InfoBarGUIs;
         }
         setUpEventListeners() {
             let c_obj = this;
-            c_obj._div.addEventListener('mousedown', (e) => this.onMouseDown(e, c_obj));
+            c_obj._div.addEventListener("mousedown", (e) => this.onMouseDown(e, c_obj));
         }
         onMouseDown(e, c_obj) {
             FightScreenGUI.resetFightRound();
@@ -1233,13 +1768,13 @@ var InfoBarGUIs;
         setTime(sep = ":") {
             let time = this._timer;
             let msec = (time % 1000).toString();
-            msec = StringUtil.padRightUntilLength(msec, 3, '0');
+            msec = StringUtil.padRightUntilLength(msec, 3, "0");
             time = Math.floor(time / 1000);
             let sec = (time % 60).toString();
-            sec = StringUtil.padRightUntilLength(sec, 2, '0');
+            sec = StringUtil.padRightUntilLength(sec, 2, "0");
             time = Math.floor(time / 60);
             let min = (time % 60).toString();
-            min = StringUtil.padRightUntilLength(min, 2, '0');
+            min = StringUtil.padRightUntilLength(min, 2, "0");
             this._div.innerHTML = min + sep + sec + sep + msec;
         }
         resetTimer(time) {
@@ -1253,7 +1788,10 @@ var InfoBarGUIs;
         }
         startTimer() {
             if (this._timerIntervalID == null) {
-                this._timerIntervalID = setInterval(() => { this._timer -= 33; this.setTime(); }, 33);
+                this._timerIntervalID = setInterval(() => {
+                    this._timer -= 33;
+                    this.setTime();
+                }, 33);
             }
         }
     }
@@ -1266,7 +1804,9 @@ var InfoBarGUIs;
             this._stopPlanningGUIs = [];
             this._maxTime = 30 * 1000;
             this._div = document.querySelector(EnemyGridTimerGridGUI.fullPath);
-            document.querySelectorAll(TimerGridStopPlanningGUI.classFullPath).forEach((e) => this._stopPlanningGUIs.push(new TimerGridStopPlanningGUI(e)));
+            document
+                .querySelectorAll(TimerGridStopPlanningGUI.classFullPath)
+                .forEach((e) => this._stopPlanningGUIs.push(new TimerGridStopPlanningGUI(e)));
             this._timerGUI = new TimerGridTimerGUI();
             this.setUp();
         }
@@ -1282,8 +1822,7 @@ var InfoBarGUIs;
             this._maxTime -= 500;
             this._timerGUI.resetTimer(this._maxTime);
         }
-        update() {
-        }
+        update() { }
     }
     EnemyGridTimerGridGUI._divClass = ".plan_countdown";
     class InfoBarEnemyGridGUI {
@@ -1297,12 +1836,16 @@ var InfoBarGUIs;
             }
             InfoBarEnemyGridGUI._nrInstances += 1;
             this._div = document.getElementById(InfoBarEnemyGridGUI._divID);
-            document.querySelectorAll(InfoBarEnemyGridGUI.fullPath + ">" + EnemyGridGUI._divClass).forEach((e, i) => this._enemyGrindGUIs.push(new EnemyGridGUI(e)));
+            document
+                .querySelectorAll(InfoBarEnemyGridGUI.fullPath + ">" + EnemyGridGUI._divClass)
+                .forEach((e, i) => this._enemyGrindGUIs.push(new EnemyGridGUI(e)));
             this._timerGridGUI = new EnemyGridTimerGridGUI();
             this.update();
         }
         update() {
-            this._enemyGrindGUIs.forEach((e, i) => { i < InfoBarEnemyGridGUI._nrEnemyGridGUIs ? e.show() : e.hide(); });
+            this._enemyGrindGUIs.forEach((e, i) => {
+                i < InfoBarEnemyGridGUI._nrEnemyGridGUIs ? e.show() : e.hide();
+            });
         }
         setUpFight(fightInstance) {
             fightInstance.enemies.forEach((e, i) => this._enemyGrindGUIs[i].setEnemy(e));
@@ -1325,8 +1868,7 @@ var InfoBarGUIs;
             InfoBarPlayerInfoGUI._nrInstances += 1;
             this._div = document.getElementById(InfoBarPlayerInfoGUI._divID);
         }
-        resetFightRound() {
-        }
+        resetFightRound() { }
     }
     InfoBarPlayerInfoGUI._divID = "FSInfOBarPlayerInfo";
     InfoBarPlayerInfoGUI._nrInstances = 0;
@@ -1369,13 +1911,13 @@ class DragObejctGUI {
     }
     setPosition(x, y, adjust_y = true) {
         let width = Number(getComputedStyle(this._div).getPropertyValue("width").slice(0, -2));
-        let height = Number(getComputedStyle(this._div).getPropertyValue('height').slice(0, -2));
-        this._div.style.left = (x).toString() + "px";
+        let height = Number(getComputedStyle(this._div).getPropertyValue("height").slice(0, -2));
+        this._div.style.left = x.toString() + "px";
         if (adjust_y) {
             this._div.style.top = (y - height).toString() + "px";
         }
         else {
-            this._div.style.top = (y).toString() + "px";
+            this._div.style.top = y.toString() + "px";
         }
     }
     setInnerHTML(innerHTML) {
@@ -1386,13 +1928,15 @@ class DragObejctGUI {
     }
     setStyle(style) {
         this._style = style;
-        style.forEach((v, k) => { this._div.style[k] = v; });
+        style.forEach((v, k) => {
+            this._div.style[k] = v;
+        });
     }
     reset() {
         //clear class list
         this._div.classList.forEach((k) => this._div.classList.remove(k));
         //clear style
-        this._style.forEach((v, k) => this._div.style[k] = "");
+        this._style.forEach((v, k) => (this._div.style[k] = ""));
         //clear innerHTML
         this._div.innerHTML = "";
         //hide
@@ -1455,7 +1999,9 @@ class DragAPI {
         return this._dragObjType;
     }
     static get dragObjectData() {
-        return this._dragging ? window.sessionStorage.getItem(this._dragObjType) : null;
+        return this._dragging
+            ? window.sessionStorage.getItem(this._dragObjType)
+            : null;
     }
     static get insideDragDestinationArea() {
         return this._insideDragDestArea;
@@ -1509,8 +2055,8 @@ class DragAPI {
         this._dragObj.moveWithMouse(e);
     }
     static setUpEventListeners() {
-        DragAPI._body.addEventListener('mousemove', (e) => DragAPI.onMouseMove(e));
-        DragAPI._body.addEventListener('mouseup', (e) => DragAPI.onMouseUp(e));
+        DragAPI._body.addEventListener("mousemove", (e) => DragAPI.onMouseMove(e));
+        DragAPI._body.addEventListener("mouseup", (e) => DragAPI.onMouseUp(e));
     }
     static onMouseMove(e) {
         if (this.dragging) {
@@ -1546,7 +2092,7 @@ class FightScreenGUI {
     }
     setUpEventListeners() {
         let c_obj = this;
-        this._div.addEventListener('mousemove', (e) => c_obj.onMouseMove(e, c_obj));
+        this._div.addEventListener("mousemove", (e) => c_obj.onMouseMove(e, c_obj));
     }
     setUpFight(fightInstance) {
         this._infoBarGUI.setUpEnemiesGUI(fightInstance);
@@ -1597,6 +2143,9 @@ class GameController {
         if (this._initialized) {
             throw "ERROR: GameController can only be initialized once!";
         }
+        document.addEventListener("contextmenu", function (event) {
+            event.preventDefault();
+        });
         this.initAPIs();
         this.initControllers();
         this._player = new Player(new EntityStats(10, new ElementalAttributes(), new ElementalAttributes(3), new ElementalAttributes()), 2, 1);
@@ -1605,7 +2154,11 @@ class GameController {
 GameController._initialized = false;
 /*                                      Initialization and other stuff                                                 */
 GameController.init();
-let f = new Fight(['Goblin', 'Goblin', 'Goblin'], new FightBoardTemplate(new PassableTile("#002000"), [new TileWithPosition(1, 1, new EnemyTile()), new TileWithPosition(1, 2, new EnemyTile()), new TileWithPosition(1, 3, new EnemyTile())]));
-let fI = f.createFightInstance(1, GameController.player, [5, 5]);
+let f = new Fight(["Goblin", "Goblin", "Goblin"], new FightBoardTemplate(new PassableTile("#002000"), [
+    new TileWithPosition(1, 1, new EnemyTile()),
+    new TileWithPosition(1, 2, new EnemyTile()),
+    new TileWithPosition(1, 3, new EnemyTile()),
+]));
+let fI = f.createFightInstance(1, GameController.player, new Pos(4, 4));
 FightScreenController.setUpFight(fI);
 //# sourceMappingURL=main.js.map
