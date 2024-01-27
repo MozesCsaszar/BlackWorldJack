@@ -589,7 +589,6 @@ class Action {
         a.load(save);
         return a;
     }
-
     private _name: string;
     constructor(name: string) {
         this._name = name;
@@ -816,6 +815,10 @@ namespace ActionPlanBarGUIs {
                 this._div.innerHTML = a.name;
             }
         }
+        reset(): void {
+            this._action = null;
+            this._tempAction = null;
+        }
     }
     
     class ActionSpaceGUI {
@@ -905,6 +908,7 @@ namespace ActionPlanBarGUIs {
         }
         resetFightRound(): void {
             this._handGUI.resetFightRound();
+            this._actionGUI.reset();
             this.update();
         }
     }
@@ -1856,6 +1860,6 @@ class GameController {
 
 GameController.init();
 
-let f = new Fight(['Goblin'], new FightBoardTemplate(new PassableTile("#005000"), [new TileWithPosition(1, 1, new EnemyTile())]));
+let f = new Fight(['Goblin', 'Goblin', 'Goblin'], new FightBoardTemplate(new PassableTile("#002000"), [new TileWithPosition(1, 1, new EnemyTile()), new TileWithPosition(1, 2, new EnemyTile()), new TileWithPosition(1, 3, new EnemyTile())]));
 let fI = f.createFightInstance(1, GameController.player, [5,5]);
 FightScreenController.setUpFight(fI);

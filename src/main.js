@@ -507,11 +507,6 @@ class Player {
     }
 }
 class Action {
-    static load(save) {
-        let a = new Action('');
-        a.load(save);
-        return a;
-    }
     constructor(name) {
         this._name = name;
     }
@@ -526,6 +521,13 @@ class Action {
         let s_list = save.split("\\e\\");
         this._name = s_list[i];
         i++;
+    }
+}
+class MoveAction extends Action {
+    static load(save) {
+        let a = new MoveAction('');
+        a.load(save);
+        return a;
     }
 }
 class FightInstance {
@@ -714,6 +716,10 @@ var ActionPlanBarGUIs;
                 this._div.innerHTML = a.name;
             }
         }
+        reset() {
+            this._action = null;
+            this._tempAction = null;
+        }
     }
     ActionGUI._divClass = ".action";
     class ActionSpaceGUI {
@@ -796,6 +802,7 @@ var ActionPlanBarGUIs;
         }
         resetFightRound() {
             this._handGUI.resetFightRound();
+            this._actionGUI.reset();
             this.update();
         }
     }
@@ -1598,7 +1605,7 @@ class GameController {
 GameController._initialized = false;
 /*                                      Initialization and other stuff                                                 */
 GameController.init();
-let f = new Fight(['Goblin'], new FightBoardTemplate(new PassableTile("#005000"), [new TileWithPosition(1, 1, new EnemyTile())]));
+let f = new Fight(['Goblin', 'Goblin', 'Goblin'], new FightBoardTemplate(new PassableTile("#002000"), [new TileWithPosition(1, 1, new EnemyTile()), new TileWithPosition(1, 2, new EnemyTile()), new TileWithPosition(1, 3, new EnemyTile())]));
 let fI = f.createFightInstance(1, GameController.player, [5, 5]);
 FightScreenController.setUpFight(fI);
 //# sourceMappingURL=main.js.map
