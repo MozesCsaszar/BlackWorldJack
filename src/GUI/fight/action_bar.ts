@@ -16,30 +16,23 @@ namespace ActionBarGUIs {
       this.setUpEventListeners();
     }
     private setUpEventListeners() {
-      let c_obj: AreaGridCellGUI = this;
-      this._div.addEventListener("mouseenter", (e: MouseEvent) =>
-        c_obj.onMouseEnter(e, c_obj)
-      );
-      this._div.addEventListener("mouseleave", (e: MouseEvent) =>
-        c_obj.onMouseLeave(e, c_obj)
-      );
-      this._div.addEventListener("mousedown", (e: MouseEvent) => {
-        c_obj.onMouseClick(e, c_obj);
-      });
+      this._div.addEventListener("mouseenter", (e) => this.onMouseEnter(e));
+      this._div.addEventListener("mouseleave", (e) => this.onMouseLeave(e));
+      this._div.addEventListener("mousedown", (e) => this.onMouseDown(e));
     }
-    onMouseEnter(e: MouseEvent, c_obj: AreaGridCellGUI) {
+    onMouseEnter(e: MouseEvent) {
       if (!DragAPI.dragging) {
-        c_obj._div.style.borderColor = "rgb(0,0,255)";
+        this._div.style.borderColor = "rgb(0,0,255)";
         ActionBarAreaGridGUI.cursorPos = new Pos(this._col, this._row);
         ActionBarAreaGridGUI._self.updateActionPattern();
       }
     }
-    onMouseLeave(e: MouseEvent, c_obj: AreaGridCellGUI) {
+    onMouseLeave(e: MouseEvent) {
       if (!DragAPI.dragging) {
-        c_obj._div.style.borderColor = "green";
+        this._div.style.borderColor = "green";
       }
     }
-    onMouseClick(e: MouseEvent, c_obj: AreaGridCellGUI) {
+    onMouseDown(e: MouseEvent) {
       if (e.button == 0) {
         ActionBarAreaGridGUI._self.actionPatternNext();
       } else if (e.button == 2) {

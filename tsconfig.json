@@ -4,6 +4,7 @@
     "sourceMap": true,
     "outFile": "dist/main.js"
   },
+  "types": ["jquery"],
   "include": [
     "src/main.ts",
     "src/logic/*.ts",

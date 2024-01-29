@@ -1,0 +1,11 @@
+Normal mode:
+    *Fighting:
+        -turn based, you go first, then the enemy, based on your speed (so when it's your turn, you take all your actions)
+        -bad status effects decrease by half per turn
+
+Veteran mode:
+    *Fighting:
+        -first, you plan out your moves, then the enemies and you move at the same time (meaning the one with the quickest move speed goes firts, then next etc...)
+        -enemies coordinate more
+        -bad status effects decrease by 1 stack per turn
+        -start with a less time, but proportionally smaller turn lenght limit decay
