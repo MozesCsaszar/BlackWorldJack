@@ -34,7 +34,7 @@ namespace Enemy {
     }
   }
 
-  export class EnemyWithLevel implements Entity {
+  export class EnemyWithLevel extends IEntity {
     private _body: EnemyBody;
     //private _elitenessModifiers: EnemyBody[] = [];
     private _symbol: string;
@@ -69,6 +69,8 @@ namespace Enemy {
       this._pos = position;
     }
     constructor(body: EnemyBody, level: number) {
+      super(body.attributes);
+
       this._body = body.copy();
       this._level = level;
     }

@@ -202,3 +202,40 @@ class DragAPI {
     }
   }
 }
+
+class ElementStyle {
+  private properties: Map<string, string>;
+
+  constructor(properties = new Map<string, string>()) {
+    this.properties = properties;
+  }
+
+  addProperty(key: string, value: string) {
+    this.properties[key] = value;
+  }
+  removeProperty(key: string) {
+    this.properties.delete(key);
+  }
+  copy(): ElementStyle {
+    var newStyle = new ElementStyle();
+    for (var key in this.properties.keys()) {
+      newStyle.addProperty(key, this.properties[key]);
+    }
+    return newStyle;
+  }
+
+  applyStyle(element: HTMLElement) {
+    for (var key in this.properties.keys()) {
+      element[key] = this.properties[key];
+    }
+  }
+  removeOldStyle(element: HTMLElement, oldStyle: ElementStyle) {
+    for (var key in oldStyle.properties.keys()) {
+      element[key] = "";
+    }
+  }
+  applyNewStyle(element: HTMLElement, oldStyle: ElementStyle) {
+    this.removeOldStyle(element, oldStyle);
+    this.applyStyle(element);
+  }
+}

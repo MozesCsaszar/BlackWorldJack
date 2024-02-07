@@ -31,24 +31,98 @@ class Pos {
 }
 
 class ElementalAttributes {
-  fire: Number;
-  water: Number;
-  earth: Number;
-  wind: Number;
-  physical: Number;
+  fire: number;
+  water: number;
+  earth: number;
+  wind: number;
+  physical: number;
 
   constructor(
-    physical: Number = 0,
-    fire: Number = 0,
-    water: Number = 0,
-    earth: Number = 0,
-    wind: Number = 0
+    physical: number = 0,
+    fire: number = 0,
+    water: number = 0,
+    earth: number = 0,
+    wind: number = 0
   ) {
     this.physical = physical;
     this.fire = fire;
     this.water = water;
     this.earth = earth;
     this.wind = wind;
+  }
+
+  /**
+   * Add two ElementalAttributes together attribute by attribute; this operation is immutable
+   */
+  add(other: ElementalAttributes): ElementalAttributes {
+    let toRet = new ElementalAttributes();
+
+    for (let attr in this) {
+      (toRet[attr as keyof ElementalAttributes] as number) =
+        (this[attr] as number) +
+        (other[attr as keyof ElementalAttributes] as number);
+    }
+
+    return toRet;
+  }
+  /**
+   * Substract two ElementalAttributes  attribute by attribute; this operation is immutable
+   */
+  sub(other: ElementalAttributes): ElementalAttributes {
+    let toRet = new ElementalAttributes();
+
+    for (let attr in this) {
+      (toRet[attr as keyof ElementalAttributes] as number) =
+        (this[attr] as number) -
+        (other[attr as keyof ElementalAttributes] as number);
+    }
+
+    return toRet;
+  }
+  /**
+   * Multiply two ElementalAttributes together attribute by attribute; this operation is immutable
+   */
+  mul(other: ElementalAttributes): ElementalAttributes {
+    let toRet = new ElementalAttributes();
+
+    for (let attr in this) {
+      (toRet[attr as keyof ElementalAttributes] as number) =
+        (this[attr] as number) *
+        (other[attr as keyof ElementalAttributes] as number);
+    }
+
+    return toRet;
+  }
+  /**
+   * Divide two ElementalAttributes attribute by attribute; this operation is immutable
+   */
+  div(other: ElementalAttributes): ElementalAttributes {
+    let toRet = new ElementalAttributes();
+
+    for (let attr in this) {
+      let otherVal = other[attr as keyof ElementalAttributes] as number;
+      if (otherVal == 0) {
+        (toRet[attr as keyof ElementalAttributes] as number) = this[
+          attr
+        ] as number;
+      } else {
+        (toRet[attr as keyof ElementalAttributes] as number) =
+          (this[attr] as number) /
+          (other[attr as keyof ElementalAttributes] as number);
+      }
+    }
+
+    return toRet;
+  }
+  /**
+   * Return the sum of elements
+   */
+  sum(): number {
+    let toRet: number = 0;
+    for (let attr in this) {
+      toRet += this[attr] as number;
+    }
+    return toRet;
   }
 
   copy() {
@@ -63,13 +137,15 @@ class ElementalAttributes {
 }
 
 class EntityStats {
-  private _health: Number;
+  private _health: number;
+  // flat damage reduction
   private _defense: ElementalAttributes;
   private _attack: ElementalAttributes;
+  // percentage based damage reduction; applied first
   private _resistance: ElementalAttributes;
 
   constructor(
-    health: Number,
+    health: number,
     defense: ElementalAttributes,
     attack: ElementalAttributes,
     resistance: ElementalAttributes
@@ -78,6 +154,27 @@ class EntityStats {
     this._defense = defense;
     this._attack = attack;
     this._resistance = resistance;
+  }
+
+  get health(): number {
+    return this._health;
+  }
+  get attack(): ElementalAttributes {
+    return this._attack;
+  }
+  set health(newHealth: number) {
+    this._health = newHealth;
+  }
+
+  calculateDamage(attack: ElementalAttributes): number {
+    attack = attack.sub(this._defense);
+
+    return attack.sum();
+  }
+  takeDamage(attack: ElementalAttributes): number {
+    let damage = this.calculateDamage(attack);
+    this.health -= damage;
+    return damage;
   }
 
   copy(): EntityStats {
@@ -90,8 +187,31 @@ class EntityStats {
   }
 }
 
-interface Entity {
-  get baseStats(): EntityStats;
-  get pos(): Pos;
-  set pos(position: Pos);
+abstract class IEntity implements IAffectable {
+  _baseStats: EntityStats;
+  constructor(baseStats: EntityStats) {
+    this._baseStats = baseStats;
+  }
+  get baseStats(): EntityStats {
+    return this._baseStats;
+  }
+  get health(): number {
+    return this._baseStats.health;
+  }
+  set health(value: number) {
+    this.health = value;
+  }
+  get pos(): Pos {
+    return this.pos;
+  }
+  set pos(position: Pos) {
+    this.pos = position;
+  }
+
+  takeDamage(attack: ElementalAttributes): number {
+    return this._baseStats.takeDamage(attack);
+  }
+  isAlive(): boolean {
+    return this.baseStats.health > 0;
+  }
 }

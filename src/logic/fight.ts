@@ -4,6 +4,134 @@ interface FightBoardTile {
   copy(): FightBoardTile;
 }
 
+interface IAffectable {}
+
+interface IEffect {
+  apply(affectable: IAffectable): void;
+  undo(affectable: IAffectable): void;
+}
+
+interface IEntityEffect extends IEffect {
+  apply(affectable: IEntity): void;
+  undo(affectable: IEntity): void;
+}
+
+class EntityDamageEffect implements IEntityEffect {
+  damageDone: number = 0;
+  damage: ElementalAttributes;
+
+  apply(affectable: IEntity): void {
+    this.damageDone = affectable.takeDamage(this.damage);
+  }
+  undo(affectable: IEntity): void {
+    affectable.health += this.damageDone;
+  }
+}
+
+interface ITileEffect {
+  apply(affectable: ATile): void;
+  undo(affectable: ATile): void;
+}
+
+interface ITileObject extends IAffectable {}
+
+class OnTileEntity {
+  entity: IEntity;
+  nrRounds: number;
+
+  constructor(entity: IEntity) {
+    this.entity = entity;
+    this.nrRounds = this.nrRounds;
+  }
+
+  newRound(): void {
+    this.nrRounds++;
+  }
+}
+
+abstract class ATile implements IAffectable {
+  backgroundStye: ElementStyle;
+  objects: ITileObject[];
+  onEnterEffects: IEffect[];
+  onStayEffects: IEffect[];
+  onExitEffects: IEffect[];
+  entities: OnTileEntity[];
+
+  constructor(
+    onEnterEffects: IEffect[] = [],
+    onStayEffects: IEffect[] = [],
+    onExitEffects: IEffect[] = []
+  ) {
+    this.onEnterEffects = onEnterEffects;
+    this.onStayEffects = onStayEffects;
+    this.onExitEffects = onExitEffects;
+  }
+
+  applyBackgroundStyle(
+    element: HTMLElement,
+    oldStyle: ElementStyle = new ElementStyle()
+  ): void {
+    this.backgroundStye.applyNewStyle(element, oldStyle);
+  }
+
+  private _applyEffects(effects: IEffect[], affectable: IAffectable) {
+    effects.forEach((effect) => {
+      effect.apply(affectable);
+    });
+  }
+  private _undoEffects(effects: IEffect[], affectable: IAffectable) {
+    effects.forEach((effect) => {
+      effect.undo(affectable);
+    });
+  }
+
+  /**
+   * Call when an entity enters the space
+   */
+  enter(affectable: IEntity) {
+    this._applyEffects(this.onEnterEffects, affectable);
+    // add entity to entities
+    this.add(affectable);
+  }
+  /**
+   * Call when an entity stays on the space
+   */
+  stay(affectable: IEntity) {
+    for (let i = 0; i < this.entities.length; i++) {
+      if (this.entities[i].entity == affectable) {
+        if (this.entities[i].nrRounds > 0)
+          this._applyEffects(this.onStayEffects, this.entities[i].entity);
+      }
+    }
+  }
+  /**
+   * Call when an entity exits the space
+   */
+  exit(affectable: IEntity) {
+    this._applyEffects(this.onExitEffects, affectable);
+    // remove entity from entites
+    this.remove(affectable);
+  }
+
+  /**
+   * Add entity to the space without triggering onEnter effects
+   */
+  add(affectable: IEntity) {
+    this.entities.push(new OnTileEntity(affectable));
+  }
+  /**
+   * Remove entity from the space without triggering onExit effects
+   */
+  remove(affectable: IEntity) {
+    for (let i = 0; i < this.entities.length; i++) {
+      if (this.entities[i].entity == affectable) {
+        delete this.entities[i];
+        break;
+      }
+    }
+  }
+}
+
 class PassableTile implements FightBoardTile {
   private _backgroundColor: string;
   get type(): string {
@@ -164,7 +292,7 @@ class FightBoard {
   }
 }
 
-class FightPlayer {
+class FightPlayer implements IAffectable {
   private _player: Player;
   private _actionsTaken: number[] = [];
   private _actions: Action.PlayerAction[];
