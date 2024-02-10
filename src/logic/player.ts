@@ -225,10 +225,9 @@ class Hand {
   }
 }
 
-class Player {
+class Player extends IEntity {
   private _nrActions: number = 2;
   private _nrDecks: number = 1;
-  private _baseStats: EntityStats;
   get nrActions(): number {
     return this._nrActions;
   }
@@ -242,7 +241,7 @@ class Player {
   //     this._nrActions = nr;
   // }
   constructor(baseStats: EntityStats, nrActions: number, nrDecks: number) {
-    this._baseStats = baseStats;
+    super(baseStats);
     this._nrActions = nrActions;
     this._nrDecks = nrDecks;
   }

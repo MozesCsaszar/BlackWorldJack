@@ -1,339 +1,371 @@
 body {
-    --DEF-background-color: rgba(0,0,0,1);
-    --DEF-save-level0-sep: "\\e\\";
-    font-family: sans-serif;
-    display: flex;
-    align-items: center;
-    background-color: var(--DEF-background-color);
-    user-select: none;
-    font-size: 15px;
+  --DEF-background-color: rgba(0, 0, 0, 1);
+  --DEF-save-level0-sep: "\\e\\";
+  font-family: sans-serif;
+  display: flex;
+  align-items: center;
+  background-color: var(--DEF-background-color);
+  user-select: none;
+  font-size: 15px;
 }
 
 div {
-    color: aliceblue;
-    background-color: var(--DEF-background-color);
+  color: aliceblue;
+  background-color: var(--DEF-background-color);
+}
+
+.text-medium {
+  font-size: small;
+}
+
+.text-red {
+  color: red;
+}
+
+.text-physical {
+  color: steelblue;
+}
+.text-fire {
+  color: rgb(254, 155, 33);
+}
+.text-earth {
+  color: rgb(158, 71, 34);
+}
+.text-water {
+  color: #2222ff;
+}
+.text-wind {
+  color: #ddd;
+}
+
+.flex-container {
+  display: flex;
 }
 
 /*                                                                FIGHT SCREEN                     */
 #FightScreen {
-    --FS-row1--height: 150px;
-    --FS-row2--height: 420px;
-    --FS-row3--height: 300px;
-    --FS-grid-row-gap: 10px;
-    --FS-grid-col-gap: 10px;
-    --FS-border-rad: 4px;
-    display: grid;
-    position: relative;
-    padding: 20px;
-    grid-row-gap: var(--FS-grid-row-gap);
-    grid-template-rows: var(--FS-row1--height) var(--FS-row2--height) var(--FS-row3--height);
-    grid-template-columns: 1400px;
+  --FS-row1--height: 150px;
+  --FS-row2--height: 420px;
+  --FS-row3--height: 300px;
+  --FS-grid-row-gap: 10px;
+  --FS-grid-col-gap: 10px;
+  --FS-border-rad: 4px;
+  display: grid;
+  position: relative;
+  padding: 20px;
+  grid-row-gap: var(--FS-grid-row-gap);
+  grid-template-rows: var(--FS-row1--height) var(--FS-row2--height) var(
+      --FS-row3--height
+    );
+  grid-template-columns: 1400px;
 }
 
-#FightScreen>.bar {
-    display: grid;
+#FightScreen > .bar {
+  display: grid;
 }
 
 #FightScreenInfoBar {
-    --FSIB-col1-width: 250px;
-    --FSIB-col2-width: 860px;
-    --FSIB-col3-width: 250px;
-    grid-row: 1;
-    align-content: space-between;
-    grid-template-rows: var(--FS-row1--height);
-    grid-template-columns: var(--FSIB-col1-width) var(--FSIB-col2-width) var(--FSIB-col3-width);
-    grid-column-gap: var(--FS-grid-col-gap);
+  --FSIB-col1-width: 250px;
+  --FSIB-col2-width: 860px;
+  --FSIB-col3-width: 250px;
+  grid-row: 1;
+  align-content: space-between;
+  grid-template-rows: var(--FS-row1--height);
+  grid-template-columns: var(--FSIB-col1-width) var(--FSIB-col2-width) var(
+      --FSIB-col3-width
+    );
+  grid-column-gap: var(--FS-grid-col-gap);
 }
 
 #FSInfoBarStatusBars {
-    grid-column: 1;
-    display: flex;
-    flex-direction: column;
-    border: solid red 3px;
+  grid-column: 1;
+  display: flex;
+  flex-direction: column;
+  border: solid red 3px;
 }
 
 #FSInfoBarPlayerInfo {
-    grid-column: 3;
-    border: solid red 3px;
+  grid-column: 3;
+  border: solid red 3px;
 }
 
 #FSInfoBarEnemyGrid {
-    grid-column: 2;
-    display: grid;
-    --FSIBEG-row-height: 72px;
-    --FSIBEG-col-width: 209px;
-    --FSIBEG-nr-cols: 4;
-    --FSIBEG-nr-rows: 2;
-    column-gap: 8px;
-    row-gap: 6px;
-    grid-template-rows: repeat(var(--FSIBEG-nr-rows), var(--FSIBEG-row-height));
-    grid-template-columns: repeat(var(--FSIBEG-nr-cols), var(--FSIBEG-col-width));
+  grid-column: 2;
+  display: grid;
+  --FSIBEG-row-height: 72px;
+  --FSIBEG-col-width: 209px;
+  --FSIBEG-nr-cols: 4;
+  --FSIBEG-nr-rows: 2;
+  column-gap: 8px;
+  row-gap: 6px;
+  grid-template-rows: repeat(var(--FSIBEG-nr-rows), var(--FSIBEG-row-height));
+  grid-template-columns: repeat(var(--FSIBEG-nr-cols), var(--FSIBEG-col-width));
 }
 
-#FSInfoBarEnemyGrid>.enemy_cell {
-
-    --FSIBEGEC-top-height: 18px;
-    --FSIBEGEC-bot-height: 54px;
-    display: grid;
-    color: aliceblue;
-    text-align: center;
-    grid-template-columns: 177px 32px;
-    grid-template-rows: var(--FSIBEGEC-top-height) var(--FSIBEGEC-bot-height);
-    cursor: default;
+#FSInfoBarEnemyGrid > .enemy_cell {
+  --FSIBEGEC-top-height: 18px;
+  --FSIBEGEC-bot-height: 54px;
+  display: grid;
+  color: aliceblue;
+  text-align: center;
+  grid-template-columns: 177px 32px;
+  grid-template-rows: var(--FSIBEGEC-top-height) var(--FSIBEGEC-bot-height);
+  cursor: default;
 }
 
-#FSInfoBarEnemyGrid>.enemy_cell>div>div {
-    border: solid aqua 1px;
+#FSInfoBarEnemyGrid > .enemy_cell > div > div {
+  border: solid aqua 1px;
 }
 
-#FSInfoBarEnemyGrid>.enemy_cell>.top {
-    grid-row: 1;
-    grid-column: 1;
-    display: flex;
-    height: var(--FSIBEGEC-top-height);
+#FSInfoBarEnemyGrid > .enemy_cell > .top {
+  grid-row: 1;
+  grid-column: 1;
+  display: flex;
+  height: var(--FSIBEGEC-top-height);
 }
 
-#FSInfoBarEnemyGrid>.enemy_cell>.top>.number {
-    display: grid;
-    align-items: center;
-    vertical-align: middle;
-    width: 16px;
-    border-top-left-radius: var(--FS-border-rad);
-
+#FSInfoBarEnemyGrid > .enemy_cell > .top > .number {
+  display: grid;
+  align-items: center;
+  vertical-align: middle;
+  width: 16px;
+  border-top-left-radius: var(--FS-border-rad);
 }
 
-#FSInfoBarEnemyGrid>.enemy_cell>.top>.name {
-    display: grid;
-    align-items: center;
-    vertical-align: middle;
-    width: 193px;
+#FSInfoBarEnemyGrid > .enemy_cell > .top > .name {
+  display: grid;
+  align-items: center;
+  vertical-align: middle;
+  width: 193px;
 }
 
-#FSInfoBarEnemyGrid>.enemy_cell>.desc {
-    display: inherit;
-    border: solid aqua 1px;
-    align-items: center;
-    vertical-align: middle;
-    grid-row: 2;
-    grid-column: 1;
-    border-bottom-left-radius: var(--FS-border-rad);
-
+#FSInfoBarEnemyGrid > .enemy_cell > .desc {
+  display: inherit;
+  border: solid aqua 1px;
+  align-items: center;
+  vertical-align: middle;
+  grid-row: 2;
+  grid-column: 1;
+  border-bottom-left-radius: var(--FS-border-rad);
 }
 
-#FSInfoBarEnemyGrid>.enemy_cell>.mods {
-    border: solid aqua 1px;
-    grid-column: 2;
-    grid-row-start: 1;
-    grid-row-end: 3;
-    border-top-right-radius: var(--FS-border-rad);
-    border-bottom-right-radius: var(--FS-border-rad);
+#FSInfoBarEnemyGrid > .enemy_cell > .mods {
+  border: solid aqua 1px;
+  grid-column: 2;
+  grid-row-start: 1;
+  grid-row-end: 3;
+  border-top-right-radius: var(--FS-border-rad);
+  border-bottom-right-radius: var(--FS-border-rad);
 }
 
-#FSInfoBarEnemyGrid>.plan_countdown {
-    grid-column-start: 2;
-    grid-column-end: 4;
-    grid-row: 2;
-    display: flex;
-    column-gap: 2px;
+#FSInfoBarEnemyGrid > .plan_countdown {
+  grid-column-start: 2;
+  grid-column-end: 4;
+  grid-row: 2;
+  display: flex;
+  column-gap: 2px;
 }
 
-#FSInfoBarEnemyGrid>.plan_countdown>.timer {
+#FSInfoBarEnemyGrid > .plan_countdown > .timer {
+  color: aliceblue;
+  text-align: center;
 
-    color: aliceblue;
-    text-align: center;
-
-    display: grid;
-    align-items: center;
-    vertical-align: middle;
-    width: 272px;
-    border: solid aqua 1px;
-    border-radius: var(--FS-border-rad);
-    font-size: xx-large;
-    font-weight: bolder;
-    cursor: default
+  display: grid;
+  align-items: center;
+  vertical-align: middle;
+  width: 272px;
+  border: solid aqua 1px;
+  border-radius: var(--FS-border-rad);
+  font-size: xx-large;
+  font-weight: bolder;
+  cursor: default;
 }
 
-#FSInfoBarEnemyGrid>.plan_countdown>.end_planning {
-    color: aliceblue;
-    text-align: center;
-    grid-column-start: 2;
-    grid-column-end: 4;
-    display: grid;
-    align-items: center;
-    vertical-align: middle;
-    width: 75px;
-    border: solid purple 3px;
-    border-radius: var(--FS-border-rad);
-    font-size: large;
-    font-weight: bolder;
-    cursor: pointer;
+#FSInfoBarEnemyGrid > .plan_countdown > .end_planning {
+  color: aliceblue;
+  text-align: center;
+  grid-column-start: 2;
+  grid-column-end: 4;
+  display: grid;
+  align-items: center;
+  vertical-align: middle;
+  width: 75px;
+  border: solid purple 3px;
+  border-radius: var(--FS-border-rad);
+  font-size: large;
+  font-weight: bolder;
+  cursor: pointer;
 }
 
 #FightScreenActionBar {
-    --FSAB-col1-width: 250px;
-    --FSAB-col2-width: 860px;
-    --FSAB-col3-width: 250px;
-    --FSAB-list-elem-height: 32px;
-    display: grid;
-    grid-template-columns: var(--FSAB-col1-width) var(--FSAB-col2-width) var(--FSAB-col3-width);
-    grid-column-gap: var(--FS-grid-col-gap);
+  --FSAB-col1-width: 250px;
+  --FSAB-col2-width: 860px;
+  --FSAB-col3-width: 250px;
+  --FSAB-list-elem-height: 32px;
+  display: grid;
+  grid-template-columns: var(--FSAB-col1-width) var(--FSAB-col2-width) var(
+      --FSAB-col3-width
+    );
+  grid-column-gap: var(--FS-grid-col-gap);
 }
 
 #FSActionBarSpellActions {
-    grid-column: 1;
-    border: solid red 3px;
+  grid-column: 1;
+  border: solid red 3px;
 }
 
 #FSActionBarAreaGrid {
-    display: grid;
-    grid-column: 2;
-    --FSABAG-nr-cols: 10;
-    --FSABAG-nr-rows: 7;
-    --FSABAG-cell-widht: 80px;
-    --FSABAG-cell-height: 60px;
-    grid-template-rows: repeat(var(--FSABAG-nr-rows), var(--FSABAG-cell-height));
-    padding-left: 15px;
+  display: grid;
+  grid-column: 2;
+  --FSABAG-nr-cols: 10;
+  --FSABAG-nr-rows: 7;
+  --FSABAG-cell-widht: 80px;
+  --FSABAG-cell-height: 60px;
+  grid-template-rows: repeat(var(--FSABAG-nr-rows), var(--FSABAG-cell-height));
+  padding-left: 15px;
 }
 
-#FSActionBarAreaGrid>.row {
-    display: flex;
-    flex-direction: row;
-    position: relative;
-    width: 688px;
+#FSActionBarAreaGrid > .row {
+  display: flex;
+  flex-direction: row;
+  position: relative;
+  width: 688px;
 }
 
-#FSActionBarAreaGrid>.row>.cell {
-    border: solid green 2px;
-    width: var(--FSABAG-cell-widht);
-    transform: skewX(-25deg);
-    text-align: center;
-    vertical-align: middle;
-    cursor: none;
+#FSActionBarAreaGrid > .row > .cell {
+  border: solid green 2px;
+  width: var(--FSABAG-cell-widht);
+  transform: skewX(-25deg);
+  text-align: center;
+  vertical-align: middle;
+  cursor: none;
 }
 
-#FSActionBarAreaGrid>.row>.cell>div>div {
-    position: relative;
-    transform: skewX(25deg);
-    align-items: center;
-    justify-content: center;
-    height: 100%;
-    font-size: 45px;
-    background-color: rgba(0,0,0,0);
+#FSActionBarAreaGrid > .row > .cell > div > div {
+  position: relative;
+  transform: skewX(25deg);
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  font-size: 45px;
+  background-color: rgba(0, 0, 0, 0);
 }
 
 #FSActionBarOtherActions {
-    grid-column: 3;
-    border: solid red 3px;
-    pointer-events: all;
+  grid-column: 3;
+  border: solid red 3px;
+  pointer-events: all;
 }
 
-#FightScreenActionBar>div>.action_list_element {
-    border: solid red 2px;
-    width: calc(var(--FSAB-col1-width) - 6px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
+#FightScreenActionBar > div > .action_list_element {
+  border: solid red 2px;
+  width: calc(var(--FSAB-col1-width) - 6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 #FSActoinBarDragAction {
-    pointer-events: none;
-    border: solid red 4px;
-    position: absolute;
-    width: 200px;
-    height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+  pointer-events: none;
+  border: solid red 4px;
+  position: absolute;
+  width: 200px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 #FightScreenDragObject {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    pointer-events: none;
-    position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  position: absolute;
 }
 
 #FightScreenActionPlanBar {
-    display: grid;
-    --FSACB-row-height: 160px;
-    --FSACB-col-width: 268px;
-    --FSACB-nr-rows: 2;
-    --FSACB-nr-cols: 5;
-    --FSAPB-card-width: 90px;
-    --FSAPB-card-height: 126px;
-    --FSAPB-deck-width: 80px;
-    --FSAPB-deck-height: 112px;
-    column-gap: var(--FS-grid-col-gap);
-    row-gap: var(--FS-grid-row-gap);
-    grid-template-rows: repeat(var(--FSACB-nr-rows), var(--FSACB-row-height));
-    grid-template-columns: repeat(var(--FSACB-nr-cols), var(--FSACB-col-width));
+  display: grid;
+  --FSACB-row-height: 160px;
+  --FSACB-col-width: 268px;
+  --FSACB-nr-rows: 2;
+  --FSACB-nr-cols: 5;
+  --FSAPB-card-width: 90px;
+  --FSAPB-card-height: 126px;
+  --FSAPB-deck-width: 80px;
+  --FSAPB-deck-height: 112px;
+  column-gap: var(--FS-grid-col-gap);
+  row-gap: var(--FS-grid-row-gap);
+  grid-template-rows: repeat(var(--FSACB-nr-rows), var(--FSACB-row-height));
+  grid-template-columns: repeat(var(--FSACB-nr-cols), var(--FSACB-col-width));
 }
 
-#FightScreenActionPlanBar>.action_card_space {
-    --FSAPBACS-actoin-height: 16px;
-    --FSAPBACS-card_holder-height: calc(var(--FSACB-row-height) - var(--FSAPBACS-actoin-height));
-    border: dashed purple 5px;
-    display: flex;
-    flex-direction: column;
-    height: var(--FSABAG-nr-rows);
+#FightScreenActionPlanBar > .action_card_space {
+  --FSAPBACS-actoin-height: 16px;
+  --FSAPBACS-card_holder-height: calc(
+    var(--FSACB-row-height) - var(--FSAPBACS-actoin-height)
+  );
+  border: dashed purple 5px;
+  display: flex;
+  flex-direction: column;
+  height: var(--FSABAG-nr-rows);
 }
 
-#FightScreenActionPlanBar>.action_card_space>.action {
-    display: grid;
-    text-align: center;
-    vertical-align: middle;
-    border: solid purple 3px;
-    height: 16px;
-    cursor: pointer;
-    pointer-events: none;
+#FightScreenActionPlanBar > .action_card_space > .action {
+  display: grid;
+  text-align: center;
+  vertical-align: middle;
+  border: solid purple 3px;
+  height: 16px;
+  cursor: pointer;
+  pointer-events: none;
 }
 
-#FightScreenActionPlanBar>.action_card_space>.card_holder {
-    position: relative;
-    display: flex;
-    pointer-events: none;
-    height: var(--FSAPBACS-card_holder-height);
+#FightScreenActionPlanBar > .action_card_space > .card_holder {
+  position: relative;
+  display: flex;
+  pointer-events: none;
+  height: var(--FSAPBACS-card_holder-height);
 }
 
-#FightScreenActionPlanBar>.action_card_space>.card_holder>.card {
-    position: absolute;
-    border: solid red 3px;
-    border-radius: calc(var(--FS-border-rad) * 1.5);
-    width: var(--FSAPB-card-width);
-    height: var(--FSAPB-card-height);
-    background-color: var(--DEF-background-color);
-    cursor: default;
+#FightScreenActionPlanBar > .action_card_space > .card_holder > .card {
+  position: absolute;
+  border: solid red 3px;
+  border-radius: calc(var(--FS-border-rad) * 1.5);
+  width: var(--FSAPB-card-width);
+  height: var(--FSAPB-card-height);
+  background-color: var(--DEF-background-color);
+  cursor: default;
 }
 
 #FSActionPlanBarDragCard {
-    position: absolute;
-    display: none;
-    background-color: var(--DEF-background-color);
-    border: solid red 3px;
-    border-radius: calc(var(--FS-border-rad) * 1.5);
-    width: var(--FSAPB-card-width);
-    height: var(--FSAPB-card-height);
-    cursor: grabbing;
-    pointer-events: none;
+  position: absolute;
+  display: none;
+  background-color: var(--DEF-background-color);
+  border: solid red 3px;
+  border-radius: calc(var(--FS-border-rad) * 1.5);
+  width: var(--FSAPB-card-width);
+  height: var(--FSAPB-card-height);
+  cursor: grabbing;
+  pointer-events: none;
 }
 
-#FightScreenActionPlanBar>.deck_holder {
-    grid-column-start: 2;
-    grid-column-end: 5;
-    grid-row: 2;
-    display: flex;
-    column-gap: var(--FS-grid-col-gap);
-    justify-content: space-around;
+#FightScreenActionPlanBar > .deck_holder {
+  grid-column-start: 2;
+  grid-column-end: 5;
+  grid-row: 2;
+  display: flex;
+  column-gap: var(--FS-grid-col-gap);
+  justify-content: space-around;
 }
 
-#FightScreenActionPlanBar>.deck_holder>.deck {
-    width: var(--FSAPB-deck-width);
-    height: var(--FSAPB-deck-height);
-    display: grid;
-    text-align: center;
-    align-content: center;
-    border: solid purple 3px;
-    border-radius: var(--FS-border-rad);
-    cursor: pointer;
+#FightScreenActionPlanBar > .deck_holder > .deck {
+  width: var(--FSAPB-deck-width);
+  height: var(--FSAPB-deck-height);
+  display: grid;
+  text-align: center;
+  align-content: center;
+  border: solid purple 3px;
+  border-radius: var(--FS-border-rad);
+  cursor: pointer;
 }

@@ -33,7 +33,7 @@ class FightScreenGUI {
     );
   }
   setUpFight(fightInstance: FightInstance) {
-    this._infoBarGUI.setUpEnemiesGUI(fightInstance);
+    this._infoBarGUI.setUpFight(fightInstance);
     this._actionBarGUI.setUpFightBoard(fightInstance);
     this._actionPlanBarGUI.setUpFight(fightInstance);
   }

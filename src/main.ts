@@ -8,11 +8,15 @@ GameController.init();
 
 let f = new Fight(
   ["Goblin", "Goblin", "Goblin"],
-  new FightBoardTemplate(new PassableTile("#002000"), [
-    new TileWithPosition(1, 1, new EnemyTile()),
-    new TileWithPosition(1, 2, new EnemyTile()),
-    new TileWithPosition(1, 3, new EnemyTile()),
-  ])
+  new FightBoardTemplate(
+    GrassTile.factory.instanciate(),
+    [
+      new TileWithPosition(1, 1, DangerTile.factory.instanciate()),
+      new TileWithPosition(1, 2, DangerTile.factory.instanciate()),
+      new TileWithPosition(1, 3, DangerTile.factory.instanciate()),
+    ],
+    [new Pos(2, 2), new Pos(2, 3), new Pos(2, 4)]
+  )
 );
 let fI = f.createFightInstance(1, GameController.player, new Pos(4, 4));
 FightScreenController.setUpFight(fI);

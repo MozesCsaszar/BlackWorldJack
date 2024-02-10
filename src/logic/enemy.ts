@@ -136,7 +136,6 @@ namespace Enemy {
           }
           tempLevels = tempLevels.sort();
           if (this._scaling != undefined) {
-            console.log("SCALED");
             return this._levels.get(0).copy();
           } else {
             let higher: number = undefined;

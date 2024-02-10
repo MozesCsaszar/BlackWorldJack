@@ -1,14 +1,11 @@
-interface FightBoardTile {
-  repr(contentRepr: string): string;
-  get type(): string;
-  copy(): FightBoardTile;
-}
+/// <reference path="../GUI/common.ts" />
 
 interface IAffectable {}
 
 interface IEffect {
   apply(affectable: IAffectable): void;
   undo(affectable: IAffectable): void;
+  copy(): IEffect;
 }
 
 interface IEntityEffect extends IEffect {
@@ -20,11 +17,18 @@ class EntityDamageEffect implements IEntityEffect {
   damageDone: number = 0;
   damage: ElementalAttributes;
 
+  constructor(damage: ElementalAttributes) {
+    this.damage = damage;
+  }
+
   apply(affectable: IEntity): void {
     this.damageDone = affectable.takeDamage(this.damage);
   }
   undo(affectable: IEntity): void {
     affectable.health += this.damageDone;
+  }
+  copy(): EntityDamageEffect {
+    return new EntityDamageEffect(this.damage.copy());
   }
 }
 
@@ -49,19 +53,25 @@ class OnTileEntity {
   }
 }
 
+/**
+ * On tile effects should be immutable!
+ */
 abstract class ATile implements IAffectable {
   backgroundStye: ElementStyle;
-  objects: ITileObject[];
+  objects: ITileObject[] = [];
   onEnterEffects: IEffect[];
   onStayEffects: IEffect[];
   onExitEffects: IEffect[];
-  entities: OnTileEntity[];
+  entities: OnTileEntity[] = [];
+  passable: boolean;
 
   constructor(
+    backgroundStyle: ElementStyle,
     onEnterEffects: IEffect[] = [],
     onStayEffects: IEffect[] = [],
     onExitEffects: IEffect[] = []
   ) {
+    this.backgroundStye = backgroundStyle;
     this.onEnterEffects = onEnterEffects;
     this.onStayEffects = onStayEffects;
     this.onExitEffects = onExitEffects;
@@ -73,6 +83,8 @@ abstract class ATile implements IAffectable {
   ): void {
     this.backgroundStye.applyNewStyle(element, oldStyle);
   }
+
+  abstract copy(): ATile;
 
   private _applyEffects(effects: IEffect[], affectable: IAffectable) {
     effects.forEach((effect) => {
@@ -132,68 +144,119 @@ abstract class ATile implements IAffectable {
   }
 }
 
-class PassableTile implements FightBoardTile {
-  private _backgroundColor: string;
-  get type(): string {
-    return "PassableTile";
-  }
-  constructor(backgroundColor: string) {
-    this._backgroundColor = backgroundColor;
-  }
-  repr(contentRepr: string = ""): string {
-    return (
-      '<div style="background-color: ' +
-      this._backgroundColor +
-      '; width: 100%; height: 100%">' +
-      contentRepr +
-      "</div>"
+interface ITileFactory {
+  instanciate(
+    onEnterEffects: IEffect[],
+    onStayEffects: IEffect[],
+    onExitEffects: IEffect[]
+  ): ATile;
+  instanciateCustom(
+    onEnterEffects: IEffect[],
+    onStayEffects: IEffect[],
+    onExitEffects: IEffect[]
+  ): ATile;
+}
+
+class GrassTileFactory implements ITileFactory {
+  static backgroundStye: ElementStyle = new ElementStyle(
+    new Map([["backgroundColor", "green"]])
+  );
+  static onEnterEffects: IEffect[] = [];
+  static onStayEffects: IEffect[] = [];
+  static onExitEffects: IEffect[] = [];
+  instanciate(
+    onEnterEffects: IEffect[] = [],
+    onStayEffects: IEffect[] = [],
+    onExitEffects: IEffect[] = []
+  ): GrassTile {
+    return new GrassTile(
+      GrassTileFactory.backgroundStye,
+      [...onEnterEffects, ...GrassTileFactory.onEnterEffects],
+      [...onStayEffects, ...GrassTileFactory.onStayEffects],
+      [...onExitEffects, ...GrassTileFactory.onExitEffects]
     );
   }
-  copy(): PassableTile {
-    return new PassableTile(this._backgroundColor);
+  instanciateCustom(
+    onEnterEffects: IEffect[] = [],
+    onStayEffects: IEffect[] = [],
+    onExitEffects: IEffect[] = []
+  ): ATile {
+    return new GrassTile(
+      GrassTileFactory.backgroundStye,
+      onEnterEffects,
+      onStayEffects,
+      onExitEffects
+    );
   }
 }
 
-class EnemyTile implements FightBoardTile {
-  private _backgroundTile: FightBoardTile;
-  get type(): string {
-    return "EnemyTile";
+class GrassTile extends ATile {
+  static factory = new GrassTileFactory();
+
+  copy(): GrassTile {
+    return GrassTile.factory.instanciate();
   }
-  get backgroundTile(): FightBoardTile {
-    return this._backgroundTile;
+}
+
+class DangerTileFactory implements ITileFactory {
+  static backgroundStye: ElementStyle = new ElementStyle(
+    new Map([["backgroundColor", "red"]])
+  );
+  static onEnterEffects: IEffect[] = [
+    new EntityDamageEffect(new ElementalAttributes(1)),
+  ];
+  static onStayEffects: IEffect[] = [
+    new EntityDamageEffect(new ElementalAttributes(1)),
+  ];
+  static onExitEffects: IEffect[] = [];
+  instanciate(
+    onEnterEffects: IEffect[] = [],
+    onStayEffects: IEffect[] = [],
+    onExitEffects: IEffect[] = []
+  ): GrassTile {
+    return new DangerTile(
+      DangerTileFactory.backgroundStye,
+      [...onEnterEffects, ...DangerTileFactory.onEnterEffects],
+      [...onStayEffects, ...DangerTileFactory.onStayEffects],
+      [...onExitEffects, ...DangerTileFactory.onExitEffects]
+    );
   }
-  constructor(backgroundTile: FightBoardTile = undefined) {
-    this._backgroundTile = backgroundTile;
+  instanciateCustom(
+    onEnterEffects: IEffect[] = [],
+    onStayEffects: IEffect[] = [],
+    onExitEffects: IEffect[] = []
+  ): ATile {
+    return new DangerTile(
+      DangerTileFactory.backgroundStye,
+      onEnterEffects,
+      onStayEffects,
+      onExitEffects
+    );
   }
-  setBackgroundTile(tile: FightBoardTile): void {
-    if (this._backgroundTile == undefined) {
-      this._backgroundTile = tile;
-    } else {
-      throw "ERROR: Cannot set background tile of EnemyTile when it is not unknown!";
-    }
-  }
-  repr(contentRepr: string = ""): string {
-    return this._backgroundTile.repr(contentRepr);
-  }
-  copy(): EnemyTile {
-    return new EnemyTile(this.backgroundTile);
+}
+
+class DangerTile extends ATile {
+  static factory = new DangerTileFactory();
+
+  copy(): DangerTile {
+    return DangerTile.factory.instanciate();
   }
 }
 
 class TileWithPosition {
   private _row: number;
   private _col: number;
-  private _tile: FightBoardTile;
+  private _tile: ATile;
   get row(): number {
     return this._row;
   }
   get col(): number {
     return this._col;
   }
-  get tile(): FightBoardTile {
+  get tile(): ATile {
     return this._tile;
   }
-  constructor(row: number, col: number, tile: FightBoardTile) {
+  constructor(row: number, col: number, tile: ATile) {
     this._row = row;
     this._col = col;
     this._tile = tile;
@@ -203,53 +266,58 @@ class TileWithPosition {
   }
 }
 
+/**
+ * A class which helps you instantiate the fighting board; it's elements shouldn't be modified!
+ */
 class FightBoardTemplate {
-  private _defTile: FightBoardTile;
-  private _tiles: TileWithPosition[] = [];
+  private _defaultTile: ATile;
+  private _tiles: TileWithPosition[];
+  private _enemySpawnPositions: Pos[];
   get tiles(): readonly TileWithPosition[] {
     return this._tiles;
   }
-  get defaultTile(): FightBoardTile {
-    return this._defTile;
+  get defaultTile(): ATile {
+    return this._defaultTile;
   }
-  constructor(defTile: FightBoardTile, tiles: TileWithPosition[] = []) {
-    this._defTile = defTile;
-    tiles.forEach((e) => {
-      this._tiles.push(e.copy());
-    });
+  get enemySpawnPositions(): Pos[] {
+    return this._enemySpawnPositions;
+  }
+  constructor(
+    defTile: ATile,
+    tiles: TileWithPosition[] = [],
+    enemySpawnPositions: Pos[] = []
+  ) {
+    this._defaultTile = defTile;
+    this._enemySpawnPositions = enemySpawnPositions;
+    this._tiles = tiles;
   }
   copy(): FightBoardTemplate {
-    return new FightBoardTemplate(this._defTile, this._tiles);
+    return new FightBoardTemplate(this._defaultTile, this._tiles);
   }
 }
 
 class FightBoard {
-  private _baseLayer: FightBoardTile[][] = [];
-  private _enemyLayer: Enemy.EnemyWithLevel[][] = [];
+  private _tiles: ATile[][] = [];
   private _width: number;
   private _height: number;
-  private _enemySpawnTiles: Pos[] = [];
+  private _enemySpawnPositions: Pos[] = [];
   private _playerPos: Pos;
   get playerPos(): Pos {
     return this._playerPos;
   }
-  get baseLayer(): readonly FightBoardTile[][] {
-    return this._baseLayer;
-  }
-  get enemyLayer(): readonly Enemy.EnemyWithLevel[][] {
-    return this._enemyLayer;
+  get tiles(): ATile[][] {
+    return this._tiles;
   }
   constructor(width: number, height: number) {
     for (let i = 0; i < height; i++) {
-      this._baseLayer[i] = [];
-      this._enemyLayer[i] = [];
+      this._tiles[i] = [];
     }
     this._width = width;
     this._height = height;
   }
   setUpFromTemplate(template: FightBoardTemplate) {
     let templated: boolean[][] = [];
-    this._enemySpawnTiles = [];
+    this._enemySpawnPositions = [];
     for (let i = 0; i < this._height; i++) {
       templated.push([]);
       for (let j = 0; j < this._width; j++) {
@@ -257,38 +325,35 @@ class FightBoard {
       }
     }
     template.tiles.forEach((e) => {
-      this._baseLayer[e.row][e.col] = e.tile.copy();
+      this._tiles[e.row][e.col] = e.tile.copy();
       templated[e.row][e.col] = true;
-      if (e.tile.type == "EnemyTile") {
-        this._enemySpawnTiles.push(new Pos(e.col, e.row));
-        let t: EnemyTile = e.tile as EnemyTile;
-        if (t.backgroundTile == undefined) {
-          t.setBackgroundTile(template.defaultTile.copy());
-        }
-        this._baseLayer[e.row][e.col] = t;
-      }
     });
+    this._enemySpawnPositions = template.enemySpawnPositions;
+    // fill in the rest with default tiles
     for (let i = 0; i < this._height; i++) {
       for (let j = 0; j < this._width; j++) {
         if (!templated[i][j]) {
-          this._baseLayer[i][j] = template.defaultTile.copy();
+          this._tiles[i][j] = template.defaultTile.copy();
         }
       }
     }
   }
   setUpEnemies(enemies: Enemy.EnemyWithLevel[]) {
     enemies.forEach((e) => {
-      let r: number = MathUtil.getRandomIntBelow(this._enemySpawnTiles.length);
-      let place: Pos = this._enemySpawnTiles[r];
-      this._enemyLayer[place.y][place.x] = e;
+      let r: number = MathUtil.getRandomIntBelow(
+        this._enemySpawnPositions.length
+      );
+      let place: Pos = this._enemySpawnPositions[r];
+      this._tiles[place.y][place.x].add(e);
       e.pos = place;
-      this._enemySpawnTiles[r] =
-        this._enemySpawnTiles[this._enemySpawnTiles.length - 1];
-      this._enemySpawnTiles.pop();
+      this._enemySpawnPositions[r] =
+        this._enemySpawnPositions[this._enemySpawnPositions.length - 1];
+      this._enemySpawnPositions.pop();
     });
   }
-  setUpPlayer(playerPos: Pos) {
+  setUpPlayer(playerPos: Pos, player: FightPlayer) {
     this._playerPos = playerPos;
+    this._tiles[playerPos.y][playerPos.x].add(player.player);
   }
 }
 
@@ -306,6 +371,9 @@ class FightPlayer implements IAffectable {
   constructor(player: Player) {
     this._player = player;
     this._actions = Action.player_actions;
+  }
+  getHTMLText(): string {
+    return this.player.baseStats.getHTMLText();
   }
 }
 
@@ -339,7 +407,7 @@ class FightInstance {
     this._fightBoard = new FightBoard(width, height);
     this._fightBoard.setUpFromTemplate(boardTemplate);
     this._fightBoard.setUpEnemies(this._enemies);
-    this._fightBoard.setUpPlayer(this.playerPos);
+    this._fightBoard.setUpPlayer(this.playerPos, this._player);
   }
   addEnemy(e: Enemy.EnemyWithLevel) {
     e.symbol = String(this._enemies.length + 1);

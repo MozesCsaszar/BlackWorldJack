@@ -31,6 +31,13 @@ class Pos {
 }
 
 class ElementalAttributes {
+  static symbols = {
+    physical: "&#x2BC0;",
+    fire: "&#x2BC5;",
+    water: "&#x2BC6;",
+    wind: "&#x2BC7;",
+    earth: "&#x2BC8;",
+  };
   fire: number;
   water: number;
   earth: number;
@@ -49,6 +56,16 @@ class ElementalAttributes {
     this.water = water;
     this.earth = earth;
     this.wind = wind;
+  }
+
+  isZero(): boolean {
+    return (
+      this.physical == 0 &&
+      this.fire == 0 &&
+      this.water == 0 &&
+      this.earth == 0 &&
+      this.wind == 0
+    );
   }
 
   /**
@@ -134,9 +151,33 @@ class ElementalAttributes {
       this.water
     );
   }
+  /**
+   * Create an HTML div object that displays a specific stat
+   * @param key which stat to create it for (physical, fire etc.)
+   * @param compareTo when stat equal to this, don't display it; use -infinity if you want to display it in any case
+   */
+  private _getStatHTML(key: keyof ElementalAttributes, compareTo: number = 0) {
+    return (this[key] as number) != compareTo
+      ? `<div class="text-${key}">${this[key]}${
+          ElementalAttributes.symbols[key as string]
+        }</div>`
+      : ``;
+  }
+  getHTMLText() {
+    return this.isZero()
+      ? `0`
+      : Object.keys(this)
+          .map((key) => {
+            return this._getStatHTML(key as keyof ElementalAttributes);
+          })
+          .join("&nbsp;");
+  }
 }
 
 class EntityStats {
+  static symbols = {
+    health: "",
+  };
   private _health: number;
   // flat damage reduction
   private _defense: ElementalAttributes;
@@ -184,6 +225,18 @@ class EntityStats {
       this._attack.copy(),
       this._resistance.copy()
     );
+  }
+  private _getStatHTML(title: string, statHTML: string) {
+    return `<div class="text-medium flex-container">${title}:&nbsp;${statHTML}</div>`;
+  }
+  getHTMLText() {
+    return `${this._getStatHTML(
+      "Health",
+      `<div class="text-red">${this._health}</div>`
+    )}
+    ${this._getStatHTML("Attack", this._attack.getHTMLText())}
+    ${this._getStatHTML("Defense", this._defense.getHTMLText())}
+    ${this._getStatHTML("Resistance", this._resistance.getHTMLText())}`;
   }
 }
 

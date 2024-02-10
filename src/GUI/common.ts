@@ -211,27 +211,27 @@ class ElementStyle {
   }
 
   addProperty(key: string, value: string) {
-    this.properties[key] = value;
+    this.properties.set(key, value);
   }
   removeProperty(key: string) {
     this.properties.delete(key);
   }
   copy(): ElementStyle {
     var newStyle = new ElementStyle();
-    for (var key in this.properties.keys()) {
-      newStyle.addProperty(key, this.properties[key]);
+    for (var key of this.properties.keys()) {
+      newStyle.addProperty(key, this.properties.get(key));
     }
     return newStyle;
   }
 
   applyStyle(element: HTMLElement) {
-    for (var key in this.properties.keys()) {
-      element[key] = this.properties[key];
+    for (var key of this.properties.keys()) {
+      element.style[key] = this.properties.get(key);
     }
   }
   removeOldStyle(element: HTMLElement, oldStyle: ElementStyle) {
-    for (var key in oldStyle.properties.keys()) {
-      element[key] = "";
+    for (var key of oldStyle.properties.keys()) {
+      element.style[key] = "";
     }
   }
   applyNewStyle(element: HTMLElement, oldStyle: ElementStyle) {

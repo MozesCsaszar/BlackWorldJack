@@ -219,7 +219,7 @@ namespace InfoBarGUIs {
   }
 
   class InfoBarPlayerInfoGUI {
-    static readonly _divID: string = "FSInfOBarPlayerInfo";
+    static readonly _divID: string = "FSInfoBarPlayerInfo";
     private static _nrInstances: number = 0;
 
     private _div: HTMLElement;
@@ -230,7 +230,13 @@ namespace InfoBarGUIs {
       InfoBarPlayerInfoGUI._nrInstances += 1;
       this._div = document.getElementById(InfoBarPlayerInfoGUI._divID);
     }
-    resetFightRound() {}
+    display() {
+      this._div.innerHTML =
+        FightScreenController.fightInstance.player.getHTMLText();
+    }
+    resetFightRound() {
+      this.display();
+    }
   }
 
   export class InfoBarGUI {
@@ -260,8 +266,9 @@ namespace InfoBarGUIs {
       this._enemyGridGUI.resetFightRound();
       this._playerInfoGUI.resetFightRound();
     }
-    setUpEnemiesGUI(fightInstance: FightInstance): void {
+    setUpFight(fightInstance: FightInstance): void {
       this._enemyGridGUI.setUpFight(fightInstance);
+      this._playerInfoGUI.display();
     }
   }
 }

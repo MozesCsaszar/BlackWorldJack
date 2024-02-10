@@ -8,7 +8,7 @@ namespace ActionBarGUIs {
     private _div: HTMLElement;
     private _row: number;
     private _col: number;
-    private _board: FightBoard;
+    private _tile: ATile;
     constructor(div: HTMLElement, row: number, col: number) {
       this._div = div;
       this._row = row;
@@ -40,22 +40,19 @@ namespace ActionBarGUIs {
       }
     }
     setUpFightCell(board: FightBoard) {
-      this._board = board;
-      let innerRepr: string = "";
+      this._tile = board.tiles[this._row][this._col];
+      let innerText: string = "";
 
-      if (this._board.enemyLayer[this._row][this._col] != undefined) {
-        innerRepr =
-          "<div>" +
-          this._board.enemyLayer[this._row][this._col].symbol +
-          "</div>";
-      } else if (
-        this._board.playerPos.y == this._row &&
-        this._board.playerPos.x == this._col
-      ) {
-        innerRepr = "<div>" + "P" + "</div>";
-      }
-      this._div.innerHTML =
-        this._board.baseLayer[this._row][this._col].repr(innerRepr);
+      this._tile.entities.forEach((e: OnTileEntity) => {
+        if (e.entity instanceof Enemy.EnemyWithLevel) {
+          innerText += e.entity.symbol;
+        } else {
+          innerText += "P";
+        }
+      });
+      this._div.innerText = innerText;
+      // style the tile
+      this._tile.backgroundStye.applyStyle(this._div);
     }
     /**
      * Reset the looks of the cell to it's original
@@ -140,7 +137,7 @@ namespace ActionBarGUIs {
         });
     }
     setUpFightBoard(fightInstance: FightInstance) {
-      fightInstance.fightBoard.baseLayer.forEach((e, row) =>
+      fightInstance.fightBoard.tiles.forEach((e, row) =>
         e.forEach((tile, col) =>
           this._rowGUIs[row].setUpFightCell(col, fightInstance.fightBoard)
         )
