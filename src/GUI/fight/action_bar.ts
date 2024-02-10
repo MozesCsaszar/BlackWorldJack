@@ -9,6 +9,11 @@ namespace ActionBarGUIs {
     private _row: number;
     private _col: number;
     private _tile: ATile;
+
+    get tile(): ATile {
+      return this._tile;
+    }
+
     constructor(div: HTMLElement, row: number, col: number) {
       this._div = div;
       this._row = row;
@@ -143,6 +148,13 @@ namespace ActionBarGUIs {
         )
       );
       this._fightInstance = fightInstance;
+    }
+    endPlayerTurn(): void {
+      let playerPos = this._fightInstance.playerPos;
+      console.log(this._rowGUIs[playerPos.y].cellGUIs[playerPos.x].tile);
+      this._rowGUIs[playerPos.y].cellGUIs[playerPos.x].tile.stay(
+        this._fightInstance.player.player
+      );
     }
     /**
      * Reset board to original looks
@@ -389,6 +401,10 @@ namespace ActionBarGUIs {
     update(): void {
       this._spellActionList.update();
       this._otherActionList.update();
+    }
+    endPlayerTurn(): void {
+      // activate on stay effects
+      this._areaGridGUI.endPlayerTurn();
     }
     setUpFightBoard(fightInstance: FightInstance): void {
       this._areaGridGUI.setUpFightBoard(fightInstance);

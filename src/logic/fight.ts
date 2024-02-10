@@ -23,6 +23,7 @@ class EntityDamageEffect implements IEntityEffect {
 
   apply(affectable: IEntity): void {
     this.damageDone = affectable.takeDamage(this.damage);
+    console.log(`Damage done: ${this.damageDone}`);
   }
   undo(affectable: IEntity): void {
     affectable.health += this.damageDone;
@@ -43,9 +44,9 @@ class OnTileEntity {
   entity: IEntity;
   nrRounds: number;
 
-  constructor(entity: IEntity) {
+  constructor(entity: IEntity, nrRounds: number = 0) {
     this.entity = entity;
-    this.nrRounds = this.nrRounds;
+    this.nrRounds = nrRounds;
   }
 
   newRound(): void {
@@ -113,6 +114,7 @@ abstract class ATile implements IAffectable {
       if (this.entities[i].entity == affectable) {
         if (this.entities[i].nrRounds > 0)
           this._applyEffects(this.onStayEffects, this.entities[i].entity);
+        this.entities[i].nrRounds++;
       }
     }
   }
@@ -128,8 +130,8 @@ abstract class ATile implements IAffectable {
   /**
    * Add entity to the space without triggering onEnter effects
    */
-  add(affectable: IEntity) {
-    this.entities.push(new OnTileEntity(affectable));
+  add(affectable: IEntity, nrRounds: number = 0) {
+    this.entities.push(new OnTileEntity(affectable, nrRounds));
   }
   /**
    * Remove entity from the space without triggering onExit effects
@@ -344,7 +346,7 @@ class FightBoard {
         this._enemySpawnPositions.length
       );
       let place: Pos = this._enemySpawnPositions[r];
-      this._tiles[place.y][place.x].add(e);
+      this._tiles[place.y][place.x].add(e, 1);
       e.pos = place;
       this._enemySpawnPositions[r] =
         this._enemySpawnPositions[this._enemySpawnPositions.length - 1];
@@ -353,7 +355,7 @@ class FightBoard {
   }
   setUpPlayer(playerPos: Pos, player: FightPlayer) {
     this._playerPos = playerPos;
-    this._tiles[playerPos.y][playerPos.x].add(player.player);
+    this._tiles[playerPos.y][playerPos.x].add(player.player, 1);
   }
 }
 
@@ -368,8 +370,9 @@ class FightPlayer implements IAffectable {
   get actions() {
     return this._actions;
   }
-  constructor(player: Player) {
+  constructor(player: Player, playerPos: Pos) {
     this._player = player;
+    this._player.pos = playerPos;
     this._actions = Action.player_actions;
   }
   getHTMLText(): string {
@@ -381,7 +384,6 @@ class FightInstance {
   private _enemies: Enemy.EnemyWithLevel[] = [];
   private _fightBoard: FightBoard;
   private _player: FightPlayer;
-  private _playerPos: Pos;
   private _playerTempPos: Pos;
 
   get enemies(): readonly Enemy.EnemyWithLevel[] {
@@ -394,7 +396,7 @@ class FightInstance {
     return this._player;
   }
   get playerPos(): Pos {
-    return this._playerPos;
+    return this._player.player.pos;
   }
   get playerTempPos(): Pos {
     return this._playerTempPos;
@@ -414,8 +416,7 @@ class FightInstance {
     this._enemies.push(e);
   }
   addPlayer(player: Player, playerPos: Pos) {
-    this._player = new FightPlayer(player);
-    this._playerPos = playerPos;
+    this._player = new FightPlayer(player, playerPos);
     this._playerTempPos = new Pos(playerPos.x, playerPos.y);
   }
 }

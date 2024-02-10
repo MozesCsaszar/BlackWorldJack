@@ -10,8 +10,8 @@ class FightScreenGUI {
   static get fullPath(): string {
     return "#" + FightScreenGUI._divID;
   }
-  static resetFightRound(): void {
-    this._self.resetFightRound();
+  static endPlayerTurn(): void {
+    this._self.endPlayerTurn();
   }
 
   private _div: HTMLElement;
@@ -42,8 +42,13 @@ class FightScreenGUI {
       DragAPI.moveWithMouse(e);
     }
   }
-  private resetFightRound(): void {
-    this._infoBarGUI.resetFightRound();
-    this._actionPlanBarGUI.resetFightRound();
+  private endPlayerTurn(): void {
+    console.log(FightScreenController.fightInstance.player.player);
+    // apply effects to player from board
+    this._actionBarGUI.endPlayerTurn();
+    // refresh info bar
+    this._infoBarGUI.endPlayerTurn();
+    // refresh actions
+    this._actionPlanBarGUI.endPlayerTurn();
   }
 }

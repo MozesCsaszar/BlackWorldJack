@@ -40,13 +40,6 @@ namespace Enemy {
     private _symbol: string;
     private _level: number;
     private _info: EnemyInfo;
-    private _pos: Pos;
-    get pos(): Pos {
-      return this._pos;
-    }
-    get baseStats(): EntityStats {
-      return this._body.attributes;
-    }
     get level(): number {
       return this._level;
     }

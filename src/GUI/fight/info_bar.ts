@@ -11,7 +11,7 @@ namespace InfoBarGUIs {
       InfoBarStatusBarsGUI._nrInstances += 1;
       this._div = document.getElementById(InfoBarStatusBarsGUI._divID);
     }
-    resetFightRound() {}
+    endPlayerTurn() {}
   }
 
   class EnemyGridGUI {
@@ -83,7 +83,7 @@ namespace InfoBarGUIs {
       );
     }
     onMouseDown(e: MouseEvent, c_obj: TimerGridStopPlanningGUI) {
-      FightScreenGUI.resetFightRound();
+      FightScreenGUI.endPlayerTurn();
     }
   }
 
@@ -165,7 +165,7 @@ namespace InfoBarGUIs {
     reset() {
       this._timerGUI.resetTimer(this._maxTime);
     }
-    resetFightRound() {
+    endPlayerTurn() {
       this._maxTime -= 500;
       this._timerGUI.resetTimer(this._maxTime);
     }
@@ -213,8 +213,8 @@ namespace InfoBarGUIs {
     resetTimer() {
       this._timerGridGUI.reset();
     }
-    resetFightRound() {
-      this._timerGridGUI.resetFightRound();
+    endPlayerTurn() {
+      this._timerGridGUI.endPlayerTurn();
     }
   }
 
@@ -234,7 +234,7 @@ namespace InfoBarGUIs {
       this._div.innerHTML =
         FightScreenController.fightInstance.player.getHTMLText();
     }
-    resetFightRound() {
+    endPlayerTurn() {
       this.display();
     }
   }
@@ -261,10 +261,10 @@ namespace InfoBarGUIs {
       this._enemyGridGUI = new InfoBarEnemyGridGUI();
       this._playerInfoGUI = new InfoBarPlayerInfoGUI();
     }
-    resetFightRound(): void {
-      this._statusBarsGUI.resetFightRound();
-      this._enemyGridGUI.resetFightRound();
-      this._playerInfoGUI.resetFightRound();
+    endPlayerTurn(): void {
+      this._statusBarsGUI.endPlayerTurn();
+      this._enemyGridGUI.endPlayerTurn();
+      this._playerInfoGUI.endPlayerTurn();
     }
     setUpFight(fightInstance: FightInstance): void {
       this._enemyGridGUI.setUpFight(fightInstance);

@@ -241,9 +241,11 @@ class EntityStats {
 }
 
 abstract class IEntity implements IAffectable {
-  _baseStats: EntityStats;
-  constructor(baseStats: EntityStats) {
+  protected _baseStats: EntityStats;
+  protected _pos: Pos;
+  constructor(baseStats: EntityStats, pos: Pos = new Pos(0, 0)) {
     this._baseStats = baseStats;
+    this._pos = pos;
   }
   get baseStats(): EntityStats {
     return this._baseStats;
@@ -255,10 +257,10 @@ abstract class IEntity implements IAffectable {
     this.health = value;
   }
   get pos(): Pos {
-    return this.pos;
+    return this._pos;
   }
   set pos(position: Pos) {
-    this.pos = position;
+    this._pos = position;
   }
 
   takeDamage(attack: ElementalAttributes): number {

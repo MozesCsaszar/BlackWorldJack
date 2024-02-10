@@ -102,7 +102,7 @@ namespace ActionPlanBarGUIs {
         e.setLeft(i * 20.96);
       });
     }
-    resetFightRound(): void {
+    endPlayerTurn(): void {
       this._hand.reset();
       this._tempHand.reset();
       this.update();
@@ -267,8 +267,8 @@ namespace ActionPlanBarGUIs {
     hide(): void {
       this._div.style.display = "none";
     }
-    resetFightRound(): void {
-      this._handGUI.resetFightRound();
+    endPlayerTurn(): void {
+      this._handGUI.endPlayerTurn();
       this._actionGUI.reset();
       this.update();
     }
@@ -338,7 +338,7 @@ namespace ActionPlanBarGUIs {
     hide(): void {
       this._div.style.display = "none";
     }
-    resetFightRound(): void {
+    endPlayerTurn(): void {
       this.setContentSuitsValuesMana(Deck.suits, Deck.values);
     }
   }
@@ -374,9 +374,9 @@ namespace ActionPlanBarGUIs {
         i < DeckHolderGUI._currentDeckGUIs ? e.show() : e.hide();
       });
     }
-    resetFightRound(): void {
+    endPlayerTurn(): void {
       this._deckGUIs.forEach((e: DeckGUI, i: number) => {
-        i < DeckHolderGUI._currentDeckGUIs ? e.resetFightRound() : null;
+        i < DeckHolderGUI._currentDeckGUIs ? e.endPlayerTurn() : null;
       });
     }
   }
@@ -417,10 +417,10 @@ namespace ActionPlanBarGUIs {
         i >= ActionHolderGUI._currentActionGUIs ? e.hide() : e.show();
       });
     }
-    resetFightRound(): void {
+    endPlayerTurn(): void {
       ActionHolderGUI._actionGUIs.forEach((e: ActionSpaceGUI, i: number) => {
         if (i < ActionHolderGUI._currentActionGUIs) {
-          e.resetFightRound();
+          e.endPlayerTurn();
         }
       });
       ActionHolderGUI.setFinalAll();
@@ -442,9 +442,9 @@ namespace ActionPlanBarGUIs {
       this._actionHolderGUI.setUpFight(fightInstance.player);
       this._deckHolderGUI.setUpFight(fightInstance.player);
     }
-    resetFightRound(): void {
-      this._deckHolderGUI.resetFightRound();
-      this._actionHolderGUI.resetFightRound();
+    endPlayerTurn(): void {
+      this._deckHolderGUI.endPlayerTurn();
+      this._actionHolderGUI.endPlayerTurn();
     }
   }
 }

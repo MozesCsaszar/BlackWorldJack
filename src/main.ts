@@ -14,6 +14,7 @@ let f = new Fight(
       new TileWithPosition(1, 1, DangerTile.factory.instanciate()),
       new TileWithPosition(1, 2, DangerTile.factory.instanciate()),
       new TileWithPosition(1, 3, DangerTile.factory.instanciate()),
+      new TileWithPosition(4, 4, DangerTile.factory.instanciate()),
     ],
     [new Pos(2, 2), new Pos(2, 3), new Pos(2, 4)]
   )
