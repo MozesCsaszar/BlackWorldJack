@@ -23,7 +23,6 @@ class EntityDamageEffect implements IEntityEffect {
 
   apply(affectable: IEntity): void {
     this.damageDone = affectable.takeDamage(this.damage);
-    console.log(`Damage done: ${this.damageDone}`);
   }
   undo(affectable: IEntity): void {
     affectable.health += this.damageDone;
@@ -137,12 +136,9 @@ abstract class ATile implements IAffectable {
    * Remove entity from the space without triggering onExit effects
    */
   remove(affectable: IEntity) {
-    for (let i = 0; i < this.entities.length; i++) {
-      if (this.entities[i].entity == affectable) {
-        delete this.entities[i];
-        break;
-      }
-    }
+    this.entities = this.entities.filter(
+      (entity) => entity.entity != affectable
+    );
   }
 }
 

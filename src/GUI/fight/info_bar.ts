@@ -234,6 +234,9 @@ namespace InfoBarGUIs {
       this._div.innerHTML =
         FightScreenController.fightInstance.player.getHTMLText();
     }
+    refresh() {
+      this.display();
+    }
     endPlayerTurn() {
       this.display();
     }
@@ -241,6 +244,7 @@ namespace InfoBarGUIs {
 
   export class InfoBarGUI {
     static readonly _divID: string = "FightScreenInfoBar";
+    static self: InfoBarGUI;
     private static _nrInstances: number = 0;
 
     static get fullPath() {
@@ -256,6 +260,7 @@ namespace InfoBarGUIs {
         throw "InfoBarGUI already has an instance running!";
       }
       InfoBarGUI._nrInstances += 1;
+      InfoBarGUI.self = this;
       this._div = document.getElementById(InfoBarGUI._divID);
       this._statusBarsGUI = new InfoBarStatusBarsGUI();
       this._enemyGridGUI = new InfoBarEnemyGridGUI();
@@ -265,6 +270,9 @@ namespace InfoBarGUIs {
       this._statusBarsGUI.endPlayerTurn();
       this._enemyGridGUI.endPlayerTurn();
       this._playerInfoGUI.endPlayerTurn();
+    }
+    refresh(): void {
+      this._playerInfoGUI.refresh();
     }
     setUpFight(fightInstance: FightInstance): void {
       this._enemyGridGUI.setUpFight(fightInstance);

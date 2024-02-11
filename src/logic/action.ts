@@ -40,20 +40,22 @@ namespace Action {
     }
   }
 
-  abstract class Action {
+  abstract class AAction {
     color: string;
     constructor(color: string) {
       this.color = color;
     }
   }
 
-  class MoveAction extends Action {
+  export abstract class AMoveAction extends AAction {
     constructor() {
       super("#FFFF00");
     }
   }
 
-  class AttackAction extends Action {
+  class BasicMoveAction extends AMoveAction {}
+
+  class AttackAction extends AAction {
     private _attack: ElementalAttributes;
     constructor(attack: ElementalAttributes) {
       super("#FF0000");
@@ -257,11 +259,11 @@ namespace Action {
 
   // Used to chain multiple sub-patterns together, one after the other in connection points
   class Pattern {
-    private subPatterns: SubPattern[];
-    private currentStep: number = 1;
-    private chosenConnections: number[] = [0];
+    private _subPatterns: SubPattern[];
+    private _currentStep: number = 1;
+    private _chosenConnections: number[] = [0];
     constructor(subPatterns: SubPattern[]) {
-      this.subPatterns = [
+      this._subPatterns = [
         new SubPattern([
           new PatternPiece(
             [],
@@ -276,16 +278,16 @@ namespace Action {
       ].concat(subPatterns);
     }
     getCurrentSubPattern(): SubPattern {
-      return this.subPatterns[this.currentStep];
+      return this._subPatterns[this._currentStep];
     }
     getNextSubPattern(): SubPattern {
-      return this.subPatterns[this.currentStep + 1];
+      return this._subPatterns[this._currentStep + 1];
     }
     getCurrentConnections(): Connection[] {
-      return this.subPatterns[this.currentStep - 1].getConnections();
+      return this._subPatterns[this._currentStep - 1].getConnections();
     }
     getConnections(index: number): Connection[] {
-      return this.subPatterns[index].getConnections();
+      return this._subPatterns[index].getConnections();
     }
     /**
      * Take the next step in the pattern
@@ -293,9 +295,9 @@ namespace Action {
      * @returns true if a new step could be taken, false otherwise
      */
     nextStep(pos: Pos): boolean {
-      if (this.currentStep + 1 < this.subPatterns.length) {
-        this.currentStep++;
-        this.chosenConnections.push(0);
+      if (this._currentStep + 1 < this._subPatterns.length) {
+        this._currentStep++;
+        this._chosenConnections.push(0);
         this.chooseClosesConnection(pos);
         return true;
       }
@@ -307,9 +309,9 @@ namespace Action {
      * @returns true if a previous step could be taken, false otherwise
      */
     prevStep(pos: Pos): boolean {
-      if (this.currentStep > 1) {
-        this.currentStep--;
-        this.chosenConnections.pop();
+      if (this._currentStep > 1) {
+        this._currentStep--;
+        this._chosenConnections.pop();
         this.chooseClosesConnection(pos);
         return true;
       }
@@ -317,19 +319,19 @@ namespace Action {
     }
     getCurrentOccupiedSpaces(startPos: Pos): AnnotatedPos[] {
       let dir = Direction.up;
-      return this.subPatterns
+      return this._subPatterns
         .slice(1)
         .map((value, i) => {
-          if (i < this.currentStep) {
+          if (i < this._currentStep) {
             dir = addDirections(
               dir,
-              this.getConnections(i)[this.chosenConnections[i]].direction
+              this.getConnections(i)[this._chosenConnections[i]].direction
             );
 
             value.rotateTo(dir);
 
             startPos = startPos.add(
-              this.getConnections(i)[this.chosenConnections[i]].pos
+              this.getConnections(i)[this._chosenConnections[i]].pos
             );
 
             let to_ret = value.getCurrentOccupiedSpaces(startPos);
@@ -358,8 +360,8 @@ namespace Action {
       return min_i;
     }
     chooseConnection(i: number) {
-      this.chosenConnections.pop();
-      this.chosenConnections.push(i);
+      this._chosenConnections.pop();
+      this._chosenConnections.push(i);
     }
     chooseClosesConnection(pos: Pos): void {
       this.chooseConnection(this.getClosestConnection(pos));
@@ -369,8 +371,8 @@ namespace Action {
   // A pattern where each cell is mapped to an action
   class ActionPattern {
     pattern: Pattern;
-    actions: Map<string, Action>;
-    constructor(pattern: Pattern, actions: Map<string, Action>) {
+    actions: Map<string, AAction>;
+    constructor(pattern: Pattern, actions: Map<string, AAction>) {
       this.pattern = pattern;
       this.actions = actions;
     }
@@ -397,7 +399,7 @@ namespace Action {
             new PatternPiece([new AnnotatedPos("m", new Pos(0, 0))]),
           ]),
         ]),
-        new Map<string, Action>([["m", new MoveAction()]])
+        new Map<string, AAction>([["m", new BasicMoveAction()]])
       )
     ),
     new PlayerAction(
@@ -408,7 +410,7 @@ namespace Action {
             new PatternPiece([new AnnotatedPos("a", new Pos(0, 0))]),
           ]),
         ]),
-        new Map<string, Action>([
+        new Map<string, AAction>([
           ["a", new AttackAction(new ElementalAttributes(1))],
         ])
       )

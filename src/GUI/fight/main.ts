@@ -43,7 +43,6 @@ class FightScreenGUI {
     }
   }
   private endPlayerTurn(): void {
-    console.log(FightScreenController.fightInstance.player.player);
     // apply effects to player from board
     this._actionBarGUI.endPlayerTurn();
     // refresh info bar

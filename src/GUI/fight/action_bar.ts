@@ -46,6 +46,9 @@ namespace ActionBarGUIs {
     }
     setUpFightCell(board: FightBoard) {
       this._tile = board.tiles[this._row][this._col];
+      this.display();
+    }
+    display() {
       let innerText: string = "";
 
       this._tile.entities.forEach((e: OnTileEntity) => {
@@ -59,6 +62,21 @@ namespace ActionBarGUIs {
       // style the tile
       this._tile.backgroundStye.applyStyle(this._div);
     }
+    enter(entity: IEntity) {
+      // add entity to tile
+      this._tile.enter(entity);
+      // change entity position
+      entity.pos = new Pos(this._col, this._row);
+      // display changes
+      this.display();
+    }
+    exit(entity: IEntity) {
+      // remove entity from tile
+      this._tile.exit(entity);
+      // display changes
+      this.display();
+    }
+
     /**
      * Reset the looks of the cell to it's original
      */
@@ -151,7 +169,6 @@ namespace ActionBarGUIs {
     }
     endPlayerTurn(): void {
       let playerPos = this._fightInstance.playerPos;
-      console.log(this._rowGUIs[playerPos.y].cellGUIs[playerPos.x].tile);
       this._rowGUIs[playerPos.y].cellGUIs[playerPos.x].tile.stay(
         this._fightInstance.player.player
       );
@@ -175,7 +192,7 @@ namespace ActionBarGUIs {
         this.reset();
 
         this._playerAction.pattern.pattern
-          .getCurrentOccupiedSpaces(this._fightInstance.playerTempPos)
+          .getCurrentOccupiedSpaces(this._fightInstance.playerPos)
           .forEach((element) => {
             this._rowGUIs[element.pos.y].cellGUIs[
               element.pos.x
@@ -197,8 +214,22 @@ namespace ActionBarGUIs {
       this._playerAction = undefined;
       this.reset();
     }
-    // TODO: Implement this
     finalizeActionPattern(): void {
+      let player = this._fightInstance.player.player;
+      let pattern = this._playerAction.pattern;
+      pattern.getCurrentOccupiedSpaces(player.pos).forEach((annPos) => {
+        let action = pattern.actions.get(annPos.annotation);
+        // if we need to move, move there
+        if (action instanceof Action.AMoveAction) {
+          // exit old tile
+          this._rowGUIs[player.pos.y].cellGUIs[player.pos.x].exit(player);
+          // enter new tile
+          this._rowGUIs[annPos.pos.y].cellGUIs[annPos.pos.x].enter(player);
+        } else {
+        }
+      });
+      InfoBarGUIs.InfoBarGUI.self.refresh();
+      this.reset();
       this._playerAction = undefined;
     }
     actionPatternNext() {
