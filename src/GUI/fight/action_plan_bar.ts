@@ -193,7 +193,11 @@ namespace ActionPlanBarGUIs {
       );
     }
     onMouseDown(e: MouseEvent, c_obj: ActionSpaceGUI) {
-      if (e.button == 0 && c_obj._actionGUI.action != null) {
+      if (
+        e.button == 0 &&
+        c_obj._actionGUI.action != null &&
+        DragAPI.dragObjectType == null
+      ) {
         ActionBarGUIs.ActionBarAreaGridGUI._self.setUpActionPattern(
           c_obj._actionGUI.action.name
         );
