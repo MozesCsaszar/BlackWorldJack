@@ -75,6 +75,9 @@ namespace Enemy {
       e.enemyInfo = this._info;
       return e;
     }
+    getHTMLText(): string {
+      return this._baseStats.getHTMLText();
+    }
   }
 
   export class Enemy {
@@ -165,7 +168,7 @@ namespace Enemy {
           new EnemyWithLevel(
             new EnemyBody(
               new EntityStats(
-                10,
+                1,
                 new ElementalAttributes(),
                 new ElementalAttributes(3),
                 new ElementalAttributes()

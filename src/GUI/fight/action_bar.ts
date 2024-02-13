@@ -49,16 +49,15 @@ namespace ActionBarGUIs {
       this.display();
     }
     display() {
-      let innerText: string = "";
-
-      this._tile.entities.forEach((e: OnTileEntity) => {
-        if (e.entity instanceof Enemy.EnemyWithLevel) {
-          innerText += e.entity.symbol;
-        } else {
-          innerText += "P";
-        }
-      });
-      this._div.innerText = innerText;
+      this._div.innerText = this._tile.entities
+        .map((e: OnTileEntity) => {
+          if (e.entity instanceof Enemy.EnemyWithLevel) {
+            return e.entity.symbol;
+          } else {
+            return " P";
+          }
+        })
+        .join(" ");
       // style the tile
       this._tile.backgroundStye.applyStyle(this._div);
     }
@@ -73,6 +72,11 @@ namespace ActionBarGUIs {
     exit(entity: IEntity) {
       // remove entity from tile
       this._tile.exit(entity);
+      // display changes
+      this.display();
+    }
+    applyToExcept(effect: IEntityEffect, entity: IEntity) {
+      this._tile.applyToExcept(effect, entity);
       // display changes
       this.display();
     }
@@ -225,10 +229,17 @@ namespace ActionBarGUIs {
           this._rowGUIs[player.pos.y].cellGUIs[player.pos.x].exit(player);
           // enter new tile
           this._rowGUIs[annPos.pos.y].cellGUIs[annPos.pos.x].enter(player);
+        } else if (action instanceof Action.AAttackAction) {
+          this._rowGUIs[annPos.pos.y].cellGUIs[annPos.pos.x].applyToExcept(
+            action.effect,
+            player
+          );
         } else {
         }
+        // update info display after every action
+        InfoBarGUIs.InfoBarGUI.self.update();
       });
-      InfoBarGUIs.InfoBarGUI.self.refresh();
+
       this.reset();
       this._playerAction = undefined;
     }

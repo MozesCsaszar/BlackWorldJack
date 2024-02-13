@@ -45,9 +45,9 @@ class FightScreenGUI {
   private endPlayerTurn(): void {
     // apply effects to player from board
     this._actionBarGUI.endPlayerTurn();
-    // refresh info bar
+    // update info bar
     this._infoBarGUI.endPlayerTurn();
-    // refresh actions
+    // update actions
     this._actionPlanBarGUI.endPlayerTurn();
   }
 }

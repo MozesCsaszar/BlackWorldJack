@@ -55,14 +55,24 @@ namespace Action {
 
   class BasicMoveAction extends AMoveAction {}
 
-  class AttackAction extends AAction {
+  export abstract class AAttackAction extends AAction {
     private _attack: ElementalAttributes;
+    private _effect: EntityDamageEffect;
+    get attack(): ElementalAttributes {
+      return this._attack;
+    }
+    get effect(): EntityDamageEffect {
+      return this._effect;
+    }
     constructor(attack: ElementalAttributes) {
       super("#FF0000");
 
       this._attack = attack;
+      this._effect = new EntityDamageEffect(this._attack);
     }
   }
+
+  class BasicAttackAction extends AAttackAction {}
 
   class Connection {
     direction: Direction;
@@ -411,7 +421,7 @@ namespace Action {
           ]),
         ]),
         new Map<string, AAction>([
-          ["a", new AttackAction(new ElementalAttributes(1))],
+          ["a", new BasicAttackAction(new ElementalAttributes(1))],
         ])
       )
     ),

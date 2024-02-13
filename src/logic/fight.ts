@@ -111,12 +111,36 @@ abstract class ATile implements IAffectable {
   stay(affectable: IEntity) {
     for (let i = 0; i < this.entities.length; i++) {
       if (this.entities[i].entity == affectable) {
-        if (this.entities[i].nrRounds > 0)
+        if (this.entities[i].nrRounds > 0) {
           this._applyEffects(this.onStayEffects, this.entities[i].entity);
+        }
         this.entities[i].nrRounds++;
       }
     }
   }
+  /**
+   * Apply effect to all entities on current tile and to tile itself except to affectable specified
+   */
+  applyToExcept(effect: IEntityEffect, affectable: IEntity) {
+    // apply effect to self
+    this.apply(effect);
+    // apply effect to entities
+    for (let i = 0; i < this.entities.length; i++) {
+      if (this.entities[i].entity != affectable) {
+        this._applyEffects([effect], this.entities[i].entity);
+        // remove dead entities
+        if (!this.entities[i].entity.isAlive()) {
+          this.remove(this.entities[i].entity);
+          i--;
+        }
+      }
+    }
+  }
+  // TODO: Implement this
+  /**
+   * Apply effect to this tile
+   */
+  apply(effect: IEffect) {}
   /**
    * Call when an entity exits the space
    */

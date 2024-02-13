@@ -60,7 +60,9 @@ namespace InfoBarGUIs {
       } else {
         this._symbol.innerHTML = this._enemy.symbol;
         this._name.innerHTML = this._enemy.name;
-        this._desc.innerHTML = this._enemy.desc;
+        this._desc.innerHTML = this._enemy.isAlive()
+          ? this._enemy.getHTMLText()
+          : "DEAD";
         this._mods.innerHTML = "";
       }
     }
@@ -175,7 +177,7 @@ namespace InfoBarGUIs {
   class InfoBarEnemyGridGUI {
     static readonly _divID: string = "FSInfoBarEnemyGrid";
     private static _nrInstances: number = 0;
-    private static readonly _nrEnemyGridGUIs = 1;
+    private static _nrEnemyGridGUIs = 1;
 
     static get fullPath(): string {
       return InfoBarGUI.fullPath + ">#" + InfoBarEnemyGridGUI._divID;
@@ -194,7 +196,7 @@ namespace InfoBarGUIs {
         .querySelectorAll(
           InfoBarEnemyGridGUI.fullPath + ">" + EnemyGridGUI._divClass
         )
-        .forEach((e, i) =>
+        .forEach((e) =>
           this._enemyGrindGUIs.push(new EnemyGridGUI(e as HTMLElement))
         );
       this._timerGridGUI = new EnemyGridTimerGridGUI();
@@ -209,6 +211,7 @@ namespace InfoBarGUIs {
       fightInstance.enemies.forEach((e, i) =>
         this._enemyGrindGUIs[i].setEnemy(e)
       );
+      InfoBarEnemyGridGUI._nrEnemyGridGUIs = fightInstance.enemies.length;
     }
     resetTimer() {
       this._timerGridGUI.reset();
@@ -234,7 +237,7 @@ namespace InfoBarGUIs {
       this._div.innerHTML =
         FightScreenController.fightInstance.player.getHTMLText();
     }
-    refresh() {
+    update() {
       this.display();
     }
     endPlayerTurn() {
@@ -271,8 +274,9 @@ namespace InfoBarGUIs {
       this._enemyGridGUI.endPlayerTurn();
       this._playerInfoGUI.endPlayerTurn();
     }
-    refresh(): void {
-      this._playerInfoGUI.refresh();
+    update(): void {
+      this._playerInfoGUI.update();
+      this._enemyGridGUI.update();
     }
     setUpFight(fightInstance: FightInstance): void {
       this._enemyGridGUI.setUpFight(fightInstance);
