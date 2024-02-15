@@ -382,7 +382,7 @@ class FightBoard {
 class FightPlayer implements IAffectable {
   private _player: Player;
   private _actionsTaken: number[] = [];
-  private _actions: Action.PlayerAction[];
+  private _actions: Action.Action[];
 
   get player() {
     return this._player;

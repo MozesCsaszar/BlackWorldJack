@@ -113,16 +113,16 @@ namespace ActionPlanBarGUIs {
     static readonly _divClass: string = ".action";
 
     private _div: HTMLElement;
-    private _action: Action.PlayerAction = null;
-    private _tempAction: Action.PlayerAction = null;
-    get action(): Action.PlayerAction {
+    private _action: Action.Action = null;
+    private _tempAction: Action.Action = null;
+    get action(): Action.Action {
       return this._action;
     }
-    set action(action: Action.PlayerAction) {
+    set action(action: Action.Action) {
       this._action = action;
       this.update();
     }
-    set tempAction(action: Action.PlayerAction) {
+    set tempAction(action: Action.Action) {
       this._tempAction = action;
       this.update(true);
     }
@@ -140,9 +140,7 @@ namespace ActionPlanBarGUIs {
       this._action = null;
     }
     update(basedOnTemp = false): void {
-      let a: Action.PlayerAction = basedOnTemp
-        ? this._tempAction
-        : this._action;
+      let a: Action.Action = basedOnTemp ? this._tempAction : this._action;
       if (a == null) {
         this._div.innerHTML = "";
       } else {

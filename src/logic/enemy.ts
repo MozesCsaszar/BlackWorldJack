@@ -8,10 +8,109 @@ namespace Enemy {
       return new Scaling();
     }
   }
+  class EnemyAI {
+    playerActions: Action.Action[] = [];
+    nrPlayerActions: number;
+    actions: Action.Action[];
+    nrActions: number;
+    speed: number;
+    intelligence: number;
+    thinkingSpeed: number;
+    agression: number;
+    fear: number;
+    memory: number;
+    /**
+     * @param actions what moves the AI can take
+     * @param nrActions how many actions the enemy can take in a turn
+     * @param speed how quickly it activates
+     * @param intelligence how good it is in choosing the best solution from the available ones
+     * @param thinkingSpeed how many player reactions it can take into consideration
+     * @param agression how much it values dealing damage
+     * @param fear how much it fears taking damage
+     * @param memory how quickly does it figure out the player's moves
+     */
+    constructor(
+      actions: Action.Action[],
+      nrActions: number,
+      speed: number,
+      intelligence: number,
+      thinkingSpeed: number,
+      agression: number,
+      fear: number,
+      memory: number
+    ) {
+      this.actions = actions;
+      this.nrActions = nrActions;
+      this.speed = speed;
+      this.intelligence = intelligence;
+      this.thinkingSpeed = thinkingSpeed;
+      this.agression = agression;
+      this.fear = fear;
+      this.memory = memory;
+    }
+    /**
+     * Get the action the enemy will take
+     */
+    getActions(fightBoard: FightBoard, player: FightPlayer): Action.Action[] {
+      return this._chooseAction(this._getActionScores(fightBoard, player));
+    }
+    /**
+     * Get the possible moves and their scores
+     */
+    private _getActionScores(
+      fightBoard: FightBoard,
+      player: FightPlayer
+    ): Map<number, number[][]> {
+      let result = new Map<number, number[][]>();
+      // get all the possible moves for the enemy
+      let array = Array.from(
+        { length: this.actions.length },
+        (_, index) => index
+      );
+      let moves = Array.from(
+        MathUtil.generateCombinations(array, this.nrActions)
+      );
+      // get all the possible moves for the player, as predicted by this enemy
+      let playerArray = Array.from(
+        { length: this.playerActions.length },
+        (_, index) => index
+      );
+      let playerMoves = [];
+      MathUtil.shuffleArray(playerArray);
+      for (let i = 0; i < this.thinkingSpeed; i++) {
+        playerMoves.push(
+          MathUtil.generateCombinations(playerArray, this.nrPlayerActions)
+        );
+      }
+      // simulate all the combinations
+
+      return result;
+    }
+    /**
+     * Find out the score of an action
+     */
+    private _getActionScore(
+      startingPlayer: FightPlayer,
+      currentPlayer: FightPlayer,
+      startingSelf: EnemyWithLevel,
+      currentSelf: EnemyWithLevel
+    ): number {
+      return 0;
+    }
+    // TODO: Implement this with actual choice
+    /**
+     * Choose a move based on score and intelligence
+     */
+    private _chooseAction(actions: Map<number, number[][]>): Action.Action[] {
+      let scores = Array.from(actions.keys()).sort((a, b) => b - a);
+      return actions.get(scores[0])[0].map((e) => this.actions[e]);
+    }
+  }
 
   class EnemyBody {
     private _attributes: EntityStats;
     private _modifiers: Modifier[] = [];
+
     get attributes(): EntityStats {
       return this._attributes;
     }

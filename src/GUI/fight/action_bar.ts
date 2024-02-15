@@ -145,7 +145,7 @@ namespace ActionBarGUIs {
     private _div: HTMLElement;
     private _rowGUIs: AreaGridRowGUI[] = [];
     private _fightInstance: FightInstance = undefined;
-    private _playerAction: Action.PlayerAction = undefined;
+    private _playerAction: Action.Action = undefined;
     constructor() {
       if (ActionBarAreaGridGUI._nrInstances > 0) {
         throw "ActionBarAreaGridGUI already has an instance running!";
@@ -277,12 +277,12 @@ namespace ActionBarGUIs {
       "backgroundColor",
       "display",
     ];
-    private _action: Action.PlayerAction;
+    private _action: Action.Action;
     private _div: HTMLElement;
-    get action(): Action.PlayerAction {
+    get action(): Action.Action {
       return this._action;
     }
-    set action(a: Action.PlayerAction) {
+    set action(a: Action.Action) {
       this._action = a;
       this.display();
     }
@@ -338,7 +338,7 @@ namespace ActionBarGUIs {
 
   class ActionListGUI {
     private _listElements: ActionListElementGUI[] = [];
-    private _elements: Action.PlayerAction[] = [];
+    private _elements: Action.Action[] = [];
     private _currentPage: number;
     private _div: HTMLElement;
 
@@ -374,7 +374,7 @@ namespace ActionBarGUIs {
     get nrPages() {
       return Math.ceil(this._elements.length / this.elementsPerPage);
     }
-    set elements(actions: Action.PlayerAction[]) {
+    set elements(actions: Action.Action[]) {
       this._elements = actions;
     }
     nextPage(): void {
@@ -382,14 +382,14 @@ namespace ActionBarGUIs {
         this._currentPage++;
       }
     }
-    getElementOnCurrentPage(i: number): Action.PlayerAction {
+    getElementOnCurrentPage(i: number): Action.Action {
       let ind: number = this._currentPage * this._listElements.length + i;
       if (i > this.elementsPerPage || ind >= this._elements.length) {
         throw "ListGUI ERROR: Element requested not in list!";
       }
       return this._elements[ind];
     }
-    addToEnd(elem: Action.PlayerAction): void {
+    addToEnd(elem: Action.Action): void {
       this._elements.push(elem);
     }
     update() {

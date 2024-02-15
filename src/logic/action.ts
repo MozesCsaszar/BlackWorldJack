@@ -12,13 +12,7 @@ namespace Action {
     return d1 + d2 > 3 ? d1 + d2 - 4 : d1 + d2;
   }
 
-  export class PlayerAction {
-    // static load(save: string): PlayerAction {
-    //   let a: PlayerAction = new PlayerAction("");
-    //   a.load(save);
-    //   return a;
-    // }
-
+  export class Action {
     private _name: string;
     private _pattern: ActionPattern;
 
@@ -327,30 +321,32 @@ namespace Action {
       }
       return false;
     }
-    getCurrentOccupiedSpaces(startPos: Pos): AnnotatedPos[] {
+    getCurrentOccupiedSpacesByLevel(startPos: Pos): AnnotatedPos[][] {
       let dir = Direction.up;
-      return this._subPatterns
-        .slice(1)
-        .map((value, i) => {
-          if (i < this._currentStep) {
-            dir = addDirections(
-              dir,
-              this.getConnections(i)[this._chosenConnections[i]].direction
-            );
+      return this._subPatterns.slice(1).map((value, i) => {
+        if (i < this._currentStep) {
+          dir = addDirections(
+            dir,
+            this.getConnections(i)[this._chosenConnections[i]].direction
+          );
 
-            value.rotateTo(dir);
+          value.rotateTo(dir);
 
-            startPos = startPos.add(
-              this.getConnections(i)[this._chosenConnections[i]].pos
-            );
+          startPos = startPos.add(
+            this.getConnections(i)[this._chosenConnections[i]].pos
+          );
 
-            let to_ret = value.getCurrentOccupiedSpaces(startPos);
-            return to_ret;
-          } else {
-            return [];
-          }
-        })
-        .reduce((prev, current) => prev.concat(current));
+          let to_ret = value.getCurrentOccupiedSpaces(startPos);
+          return to_ret;
+        } else {
+          return [];
+        }
+      });
+    }
+    getCurrentOccupiedSpaces(startPos: Pos): AnnotatedPos[] {
+      return this.getCurrentOccupiedSpacesByLevel(startPos).reduce(
+        (prev, current) => prev.concat(current)
+      );
     }
     getClosestConnection(pos: Pos): number {
       let dists = this.getCurrentConnections().map((value) => {
@@ -389,6 +385,9 @@ namespace Action {
     getCurrentOccupiedSpaces(startPos: Pos): AnnotatedPos[] {
       return this.pattern.getCurrentOccupiedSpaces(startPos);
     }
+    getCurrentOccupiedSpacesByLevel(startPos: Pos): AnnotatedPos[][] {
+      return this.pattern.getCurrentOccupiedSpacesByLevel(startPos);
+    }
     chooseClosesConnection(pos: Pos): void {
       this.pattern.chooseClosesConnection(pos);
     }
@@ -401,7 +400,7 @@ namespace Action {
   }
 
   export let player_actions = [
-    new PlayerAction(
+    new Action(
       "Move",
       new ActionPattern(
         new Pattern([
@@ -412,7 +411,7 @@ namespace Action {
         new Map<string, AAction>([["m", new BasicMoveAction()]])
       )
     ),
-    new PlayerAction(
+    new Action(
       "Attack",
       new ActionPattern(
         new Pattern([
