@@ -12,68 +12,80 @@ class DraggableGUI {
 class DragObejctGUI {
   static readonly _divID = "FightScreenDragObject";
 
-  private _div: HTMLElement;
+  private _div: JQuery<HTMLElement>;
   private _style: Map<string, string>;
   get left(): string {
-    return this._div.style.left;
+    return this._div.css("left");
   }
   get top(): string {
-    return this._div.style.top;
+    return this._div.css("top");
   }
-  constructor() {
-    this._div = document.getElementById(DragObejctGUI._divID) as HTMLElement;
+  constructor(parent: JQuery<HTMLElement>) {
+    this._div = JQueryUtils.createDiv({
+      htmlID: DragObejctGUI._divID,
+      parent: parent,
+    });
   }
   setPosition(x: number, y: number, adjust_y: boolean = true): void {
     let width: number = Number(
-      getComputedStyle(this._div).getPropertyValue("width").slice(0, -2)
+      getComputedStyle(this._div[0]).getPropertyValue("width").slice(0, -2)
     );
     let height: number = Number(
-      getComputedStyle(this._div).getPropertyValue("height").slice(0, -2)
+      getComputedStyle(this._div[0]).getPropertyValue("height").slice(0, -2)
     );
-    this._div.style.left = x.toString() + "px";
+    this._div.css("left", x.toString() + "px");
     if (adjust_y) {
-      this._div.style.top = (y - height).toString() + "px";
+      this._div.css("top", (y - height).toString() + "px");
     } else {
-      this._div.style.top = y.toString() + "px";
+      this._div.css("left", y.toString() + "px");
     }
   }
   setInnerHTML(innerHTML: string) {
-    this._div.innerHTML = innerHTML;
+    this._div.html(innerHTML);
   }
   setOpacity(op: number): void {
-    this._div.style.opacity = op.toString();
+    this._div.css("opacity", op.toString());
   }
   setStyle(style: Map<string, string>) {
     this._style = style;
     style.forEach((v, k) => {
-      this._div.style[k] = v;
+      this._div[0].style[k] = v;
     });
   }
   reset(): void {
     //clear class list
-    this._div.classList.forEach((k) => this._div.classList.remove(k));
+    this._div[0].classList.forEach((k) => this._div[0].classList.remove(k));
     //clear style
-    this._style.forEach((v, k) => (this._div.style[k] = ""));
+    this._style.forEach((v, k) => (this._div[0].style[k] = ""));
     //clear innerHTML
-    this._div.innerHTML = "";
+    this._div.html("");
     //hide
-    this._div.style.display = "none";
+    this._div.css("display", "none");
   }
   moveWithMouse(e: MouseEvent): void {
-    this._div.style.left = (e.pageX - DragAPI.dragOffsetX).toString() + "px";
-    this._div.style.top = (e.pageY - DragAPI.dragOffsetY).toString() + "px";
+    this._div.css("left", (e.pageX - DragAPI.dragOffsetX).toString() + "px");
+    this._div.css("top", (e.pageY - DragAPI.dragOffsetY).toString() + "px");
   }
 }
 
 class DragAPI {
+  private static _initialized: boolean = false;
   private static _body: HTMLElement = document.body;
   private static _dragging: boolean = false;
   private static _releasableDrag: boolean = null;
   private static _insideDragDestArea: boolean = null;
   private static _dragObjType: string = null;
-  private static _dragObj: DragObejctGUI = new DragObejctGUI();
+  private static _dragObj: DragObejctGUI;
   private static _dragOffsetX: number;
   private static _dragOffsetY: number;
+
+  static init(parent: JQuery<HTMLElement>) {
+    if (this._initialized) {
+      throw "ERROR: GameController can only be initialized once!";
+    }
+    this._initialized = true;
+    this._dragObj = new DragObejctGUI(parent);
+  }
 
   static dragPropertyToCSS(property: string): string {
     let ret: string = "";
@@ -224,17 +236,17 @@ class ElementStyle {
     return newStyle;
   }
 
-  applyStyle(element: HTMLElement) {
+  applyStyle(element: JQuery<HTMLElement>) {
     for (var key of this.properties.keys()) {
-      element.style[key] = this.properties.get(key);
+      element.css(key, this.properties.get(key));
     }
   }
-  removeOldStyle(element: HTMLElement, oldStyle: ElementStyle) {
+  removeOldStyle(element: JQuery<HTMLElement>, oldStyle: ElementStyle) {
     for (var key of oldStyle.properties.keys()) {
-      element.style[key] = "";
+      element.css(key, "");
     }
   }
-  applyNewStyle(element: HTMLElement, oldStyle: ElementStyle) {
+  applyNewStyle(element: JQuery<HTMLElement>, oldStyle: ElementStyle) {
     this.removeOldStyle(element, oldStyle);
     this.applyStyle(element);
   }

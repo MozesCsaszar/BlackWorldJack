@@ -225,7 +225,7 @@ class Hand {
   }
 }
 
-class Player extends IEntity {
+class Player extends AEntity {
   private _nrActions: number = 2;
   private _nrDecks: number = 1;
   get nrActions(): number {

@@ -3,30 +3,30 @@
  */
 
 class Pos {
-  x: number;
-  y: number;
-  constructor(x: number, y: number) {
-    this.x = x;
-    this.y = y;
+  row: number;
+  col: number;
+  constructor(row: number, col: number) {
+    this.row = row;
+    this.col = col;
   }
 
   add(pos: Pos): Pos {
-    let p = new Pos(this.x, this.y);
-    p.x += pos.x;
-    p.y += pos.y;
+    let p = new Pos(this.row, this.col);
+    p.row += pos.row;
+    p.col += pos.col;
     return p;
   }
   sub(pos: Pos): Pos {
-    let p = new Pos(this.x, this.y);
-    p.x -= pos.x;
-    p.y -= pos.y;
+    let p = new Pos(this.row, this.col);
+    p.row -= pos.row;
+    p.col -= pos.col;
     return p;
   }
   // rotate from left to right around O(0,0)
   rotateLeft() {
-    let y = this.y;
-    this.y = -this.x;
-    this.x = y;
+    let col = this.col;
+    this.col = -this.row;
+    this.row = col;
   }
 }
 
@@ -179,32 +179,44 @@ class EntityStats {
     health: "",
   };
   private _health: number;
+  private _stamina: number;
+  private _mana: number;
   // flat damage reduction
   private _defense: ElementalAttributes;
-  private _attack: ElementalAttributes;
   // percentage based damage reduction; applied first
   private _resistance: ElementalAttributes;
 
   constructor(
     health: number,
+    stamina: number,
+    mana: number,
     defense: ElementalAttributes,
-    attack: ElementalAttributes,
     resistance: ElementalAttributes
   ) {
     this._health = health;
+    this._stamina = stamina;
+    this._mana = mana;
     this._defense = defense;
-    this._attack = attack;
     this._resistance = resistance;
   }
 
   get health(): number {
     return this._health;
   }
-  get attack(): ElementalAttributes {
-    return this._attack;
+  get stamina(): number {
+    return this._stamina;
   }
-  set health(newHealth: number) {
-    this._health = newHealth;
+  get mana(): number {
+    return this._mana;
+  }
+  set health(val: number) {
+    this._health = val;
+  }
+  set stamina(val: number) {
+    this._stamina = val;
+  }
+  set mana(val: number) {
+    this._mana = val;
   }
 
   calculateDamage(attack: ElementalAttributes): number {
@@ -221,40 +233,53 @@ class EntityStats {
   copy(): EntityStats {
     return new EntityStats(
       this._health,
+      this._stamina,
+      this._mana,
       this._defense.copy(),
-      this._attack.copy(),
       this._resistance.copy()
     );
   }
   private _getStatHTML(title: string, statHTML: string) {
     return `<div class="text-medium flex-container">${title}:&nbsp;${statHTML}</div>`;
   }
-  getHTMLText() {
-    return `${this._getStatHTML(
-      "Health",
-      `<div class="text-red">${this._health}</div>`
-    )}
-    ${this._getStatHTML("Attack", this._attack.getHTMLText())}
-    ${this._getStatHTML("Defense", this._defense.getHTMLText())}
+  getHTMLStats() {
+    return `${this._getStatHTML("Defense", this._defense.getHTMLText())}
     ${this._getStatHTML("Resistance", this._resistance.getHTMLText())}`;
   }
 }
 
-abstract class IEntity implements IAffectable {
+abstract class AEntity implements IAffectable {
   protected _baseStats: EntityStats;
+  protected _currentStats: EntityStats;
   protected _pos: Pos;
   constructor(baseStats: EntityStats, pos: Pos = new Pos(0, 0)) {
     this._baseStats = baseStats;
+    this._currentStats = baseStats.copy();
     this._pos = pos;
   }
   get baseStats(): EntityStats {
     return this._baseStats;
   }
-  get health(): number {
-    return this._baseStats.health;
+  get currentStats(): EntityStats {
+    return this._currentStats;
   }
-  set health(value: number) {
-    this.health = value;
+  get health(): number {
+    return this._currentStats.health;
+  }
+  set health(val: number) {
+    this._currentStats.health = val;
+  }
+  get stamina(): number {
+    return this._currentStats.stamina;
+  }
+  set stamina(val: number) {
+    this._currentStats.stamina = val;
+  }
+  get mana(): number {
+    return this._currentStats.mana;
+  }
+  set mana(val: number) {
+    this._currentStats.mana = val;
   }
   get pos(): Pos {
     return this._pos;

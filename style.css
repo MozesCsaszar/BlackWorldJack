@@ -14,6 +14,172 @@ div {
   background-color: var(--DEF-background-color);
 }
 
+.player-tile {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  border: 1px aqua solid;
+  border-radius: 2px;
+}
+.player-tile-left {
+  width: 80%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px aqua solid;
+}
+.player-tile-right {
+  width: 20%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+.player-tile-name {
+  display: flex;
+  width: 100%;
+  height: 20%;
+  border-right: 1px aqua solid;
+  border-bottom: 1px aqua solid;
+}
+.player-tile-left-bottom {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 80%;
+}
+.player-tile-status-bars {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 60%;
+  border-right: 1px aqua solid;
+}
+
+.enemy-tile {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  border: 1px aqua solid;
+  border-radius: 2px;
+}
+.enemy-tile-top {
+  display: flex;
+  height: 20%;
+  border-bottom: 1px aqua solid;
+  border-top: none;
+  border-right: none;
+}
+.enemy-tile-name {
+  display: flex;
+  width: 70%;
+  border-right: 1px aqua solid;
+}
+.enemy-tile-rewards {
+  display: flex;
+  width: 30%;
+}
+.enemy-tile-bottom {
+  display: flex;
+  height: 80%;
+}
+.enemy-tile-bottom-left {
+  display: flex;
+  flex-direction: column;
+  width: 80%;
+  height: 100%;
+  border-right: 1px aqua solid;
+}
+.entity-tile-modifiers {
+  width: 20%;
+  height: 100%;
+}
+.entity-tile-stats {
+  display: flex;
+  flex-direction: column;
+  height: 40%;
+  border-bottom: 1px aqua solid;
+}
+.enemy-tile-bottom-left-bottom {
+  display: flex;
+  height: 60%;
+}
+.enemy-tile-status-bars {
+  display: flex;
+  flex-direction: column;
+  width: 70%;
+  border-right: 1px aqua solid;
+}
+.entity-tile-hp {
+  width: 100%;
+  height: 33%;
+  background-color: #911;
+  border-bottom: 1px aqua solid;
+}
+.entity-tile-hp-bar {
+  width: 66%;
+  background-color: #e22;
+  z-index: 1;
+  height: 100%;
+}
+.entity-tile-sta {
+  width: 100%;
+  height: 33%;
+  background-color: #191;
+  border-bottom: 1px aqua solid;
+}
+.entity-tile-sta-bar {
+  width: 66%;
+  background-color: #2e2;
+  z-index: 1;
+  height: 100%;
+}
+.entity-tile-mp {
+  width: 100%;
+  height: 33%;
+  background-color: #119;
+  z-index: 0;
+}
+.entity-tile-mp-bar {
+  width: 66%;
+  background-color: #22e;
+  z-index: 1;
+  height: 100%;
+}
+.enemy-tile-next-move-cell {
+  display: flex;
+  flex-direction: column;
+  width: 30%;
+}
+.enemy-tile-next-move-symbols {
+  display: flex;
+  flex-direction: column;
+  height: 33%;
+  border-bottom: 1px aqua solid;
+}
+.enemy-tile-next-move-cells {
+  display: flex;
+  flex-direction: column;
+  height: 66%;
+}
+.enemy-tile-next-move-row {
+  display: flex;
+  height: 33%;
+  border-bottom: 1px aqua solid;
+}
+.enemy-tile-next-move-row._2 {
+  border-bottom: none;
+}
+.enemy-tile-next-move-row-cell {
+  display: flex;
+  width: 33%;
+  height: 100%;
+  border-right: 1px aqua solid;
+}
+.enemy-tile-next-move-row-cell._2 {
+  border-right: none;
+}
+
 .text-medium {
   font-size: small;
 }
@@ -47,6 +213,9 @@ div {
   --FS-row1--height: 150px;
   --FS-row2--height: 420px;
   --FS-row3--height: 300px;
+  --FS-col1-width: 19%;
+  --FS-col2-width: 61%;
+  --FS-col3-width: 19%;
   --FS-grid-row-gap: 10px;
   --FS-grid-col-gap: 10px;
   --FS-border-rad: 4px;
@@ -65,14 +234,12 @@ div {
 }
 
 #FightScreenInfoBar {
-  --FSIB-col1-width: 250px;
-  --FSIB-col2-width: 860px;
-  --FSIB-col3-width: 250px;
+  display: grid;
   grid-row: 1;
   align-content: space-between;
   grid-template-rows: var(--FS-row1--height);
-  grid-template-columns: var(--FSIB-col1-width) var(--FSIB-col2-width) var(
-      --FSIB-col3-width
+  grid-template-columns: var(--FS-col1-width) var(--FS-col2-width) var(
+      --FS-col3-width
     );
   grid-column-gap: var(--FS-grid-col-gap);
 }
@@ -198,13 +365,10 @@ div {
 }
 
 #FightScreenActionBar {
-  --FSAB-col1-width: 250px;
-  --FSAB-col2-width: 860px;
-  --FSAB-col3-width: 250px;
   --FSAB-list-elem-height: 32px;
   display: grid;
-  grid-template-columns: var(--FSAB-col1-width) var(--FSAB-col2-width) var(
-      --FSAB-col3-width
+  grid-template-columns: var(--FS-col1-width) var(--FS-col2-width) var(
+      --FS-col3-width
     );
   grid-column-gap: var(--FS-grid-col-gap);
 }
@@ -217,28 +381,27 @@ div {
 #FSActionBarAreaGrid {
   display: grid;
   grid-column: 2;
-  --FSABAG-nr-cols: 10;
-  --FSABAG-nr-rows: 7;
-  --FSABAG-cell-widht: 80px;
-  --FSABAG-cell-height: 60px;
+  --FSABAG-nr-cols: 3;
+  --FSABAG-nr-rows: 3;
+  --FSABAG-cell-widht: 33%;
+  --FSABAG-cell-height: 33%;
   grid-template-rows: repeat(var(--FSABAG-nr-rows), var(--FSABAG-cell-height));
-  padding-left: 15px;
+  padding: 2%;
 }
 
 #FSActionBarAreaGrid > .row {
   display: flex;
   flex-direction: row;
   position: relative;
-  width: 688px;
 }
 
-#FSActionBarAreaGrid > .row > .cell {
-  border: solid green 2px;
+#FSActionBarAreaGrid > .row > .tile {
+  border: solid black 2px;
   width: var(--FSABAG-cell-widht);
-  transform: skewX(-25deg);
   text-align: center;
   vertical-align: middle;
   cursor: none;
+  padding: 1.5%;
 }
 
 #FSActionBarAreaGrid > .row > .cell > div > div {

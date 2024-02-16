@@ -14,30 +14,31 @@ class FightScreenGUI {
     this._self.endPlayerTurn();
   }
 
-  private _div: HTMLElement;
+  private _div: JQuery<HTMLElement>;
   private _infoBarGUI: InfoBarGUIs.InfoBarGUI;
   private _actionBarGUI: ActionBarGUIs.ActionBarGUI;
   private _actionPlanBarGUI: ActionPlanBarGUIs.ActionPlanBarGUI;
-  constructor() {
+
+  constructor(parent: JQuery<HTMLElement>) {
     FightScreenGUI._self = this;
-    this._div = document.getElementById(FightScreenGUI._divID);
-    this._infoBarGUI = new InfoBarGUIs.InfoBarGUI();
-    this._actionBarGUI = new ActionBarGUIs.ActionBarGUI();
-    this._actionPlanBarGUI = new ActionPlanBarGUIs.ActionPlanBarGUI();
+    this._div = JQueryUtils.createDiv({
+      htmlID: FightScreenGUI._divID,
+      parent: parent,
+    });
+    this._infoBarGUI = new InfoBarGUIs.InfoBarGUI(this._div);
+    this._actionBarGUI = new ActionBarGUIs.ActionBarGUI(this._div);
+    this._actionPlanBarGUI = new ActionPlanBarGUIs.ActionPlanBarGUI(this._div);
     this.setUpEventListeners();
   }
   private setUpEventListeners(): void {
-    let c_obj: FightScreenGUI = this;
-    this._div.addEventListener("mousemove", (e: MouseEvent) =>
-      c_obj.onMouseMove(e, c_obj)
-    );
+    this._div.on("mousemove", (e) => this.onMouseMove(e.originalEvent));
   }
   setUpFight(fightInstance: FightInstance) {
     this._infoBarGUI.setUpFight(fightInstance);
     this._actionBarGUI.setUpFightBoard(fightInstance);
     this._actionPlanBarGUI.setUpFight(fightInstance);
   }
-  private onMouseMove(e: MouseEvent, c_obj: FightScreenGUI): void {
+  private onMouseMove(e: MouseEvent): void {
     if (DragAPI.dragging) {
       DragAPI.moveWithMouse(e);
     }

@@ -16,22 +16,26 @@ class GameController {
     DragAPI.setUpEventListeners();
   }
   private static initControllers() {
-    FightScreenController.init();
+    FightScreenController.init($("body"));
   }
   static init() {
     if (this._initialized) {
       throw "ERROR: GameController can only be initialized once!";
     }
+    this._initialized = true;
     document.addEventListener("contextmenu", function (event) {
       event.preventDefault();
     });
+
     this.initAPIs();
     this.initControllers();
+    DragAPI.init($("body"));
     this._player = new Player(
       new EntityStats(
         10,
+        10,
+        10,
         new ElementalAttributes(),
-        new ElementalAttributes(3),
         new ElementalAttributes()
       ),
       2,

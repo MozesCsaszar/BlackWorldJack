@@ -9,8 +9,8 @@ interface IEffect {
 }
 
 interface IEntityEffect extends IEffect {
-  apply(affectable: IEntity): void;
-  undo(affectable: IEntity): void;
+  apply(affectable: AEntity): void;
+  undo(affectable: AEntity): void;
 }
 
 class EntityDamageEffect implements IEntityEffect {
@@ -21,10 +21,10 @@ class EntityDamageEffect implements IEntityEffect {
     this.damage = damage;
   }
 
-  apply(affectable: IEntity): void {
+  apply(affectable: AEntity): void {
     this.damageDone = affectable.takeDamage(this.damage);
   }
-  undo(affectable: IEntity): void {
+  undo(affectable: AEntity): void {
     affectable.health += this.damageDone;
   }
   copy(): EntityDamageEffect {
@@ -40,10 +40,10 @@ interface ITileEffect {
 interface ITileObject extends IAffectable {}
 
 class OnTileEntity {
-  entity: IEntity;
+  entity: AEntity;
   nrRounds: number;
 
-  constructor(entity: IEntity, nrRounds: number = 0) {
+  constructor(entity: AEntity, nrRounds: number = 0) {
     this.entity = entity;
     this.nrRounds = nrRounds;
   }
@@ -62,7 +62,7 @@ abstract class ATile implements IAffectable {
   onEnterEffects: IEffect[];
   onStayEffects: IEffect[];
   onExitEffects: IEffect[];
-  entities: OnTileEntity[] = [];
+  entity: OnTileEntity = undefined;
   passable: boolean;
 
   constructor(
@@ -78,7 +78,7 @@ abstract class ATile implements IAffectable {
   }
 
   applyBackgroundStyle(
-    element: HTMLElement,
+    element: JQuery<HTMLElement>,
     oldStyle: ElementStyle = new ElementStyle()
   ): void {
     this.backgroundStye.applyNewStyle(element, oldStyle);
@@ -100,7 +100,7 @@ abstract class ATile implements IAffectable {
   /**
    * Call when an entity enters the space
    */
-  enter(affectable: IEntity) {
+  enter(affectable: AEntity) {
     this._applyEffects(this.onEnterEffects, affectable);
     // add entity to entities
     this.add(affectable);
@@ -108,31 +108,26 @@ abstract class ATile implements IAffectable {
   /**
    * Call when an entity stays on the space
    */
-  stay(affectable: IEntity) {
-    for (let i = 0; i < this.entities.length; i++) {
-      if (this.entities[i].entity == affectable) {
-        if (this.entities[i].nrRounds > 0) {
-          this._applyEffects(this.onStayEffects, this.entities[i].entity);
-        }
-        this.entities[i].nrRounds++;
+  stay(affectable: AEntity) {
+    if (this.entity.entity == affectable) {
+      if (this.entity.nrRounds > 0) {
+        this._applyEffects(this.onStayEffects, this.entity.entity);
       }
+      this.entity.nrRounds++;
     }
   }
   /**
    * Apply effect to all entities on current tile and to tile itself except to affectable specified
    */
-  applyToExcept(effect: IEntityEffect, affectable: IEntity) {
+  applyToExcept(effect: IEntityEffect, affectable: AEntity) {
     // apply effect to self
     this.apply(effect);
     // apply effect to entities
-    for (let i = 0; i < this.entities.length; i++) {
-      if (this.entities[i].entity != affectable) {
-        this._applyEffects([effect], this.entities[i].entity);
-        // remove dead entities
-        if (!this.entities[i].entity.isAlive()) {
-          this.remove(this.entities[i].entity);
-          i--;
-        }
+    if (this.entity.entity != affectable) {
+      this._applyEffects([effect], this.entity.entity);
+      // remove dead entities
+      if (!this.entity.entity.isAlive()) {
+        this.remove(this.entity.entity);
       }
     }
   }
@@ -144,7 +139,7 @@ abstract class ATile implements IAffectable {
   /**
    * Call when an entity exits the space
    */
-  exit(affectable: IEntity) {
+  exit(affectable: AEntity) {
     this._applyEffects(this.onExitEffects, affectable);
     // remove entity from entites
     this.remove(affectable);
@@ -153,16 +148,14 @@ abstract class ATile implements IAffectable {
   /**
    * Add entity to the space without triggering onEnter effects
    */
-  add(affectable: IEntity, nrRounds: number = 0) {
-    this.entities.push(new OnTileEntity(affectable, nrRounds));
+  add(affectable: AEntity, nrRounds: number = 0) {
+    this.entity = new OnTileEntity(affectable, nrRounds);
   }
   /**
    * Remove entity from the space without triggering onExit effects
    */
-  remove(affectable: IEntity) {
-    this.entities = this.entities.filter(
-      (entity) => entity.entity != affectable
-    );
+  remove(affectable: AEntity) {
+    this.entity = undefined;
   }
 }
 
@@ -366,7 +359,7 @@ class FightBoard {
         this._enemySpawnPositions.length
       );
       let place: Pos = this._enemySpawnPositions[r];
-      this._tiles[place.y][place.x].add(e, 1);
+      this._tiles[place.row][place.col].add(e, 1);
       e.pos = place;
       this._enemySpawnPositions[r] =
         this._enemySpawnPositions[this._enemySpawnPositions.length - 1];
@@ -375,11 +368,11 @@ class FightBoard {
   }
   setUpPlayer(playerPos: Pos, player: FightPlayer) {
     this._playerPos = playerPos;
-    this._tiles[playerPos.y][playerPos.x].add(player.player, 1);
+    this._tiles[playerPos.row][playerPos.col].add(player.player, 1);
   }
 }
 
-class FightPlayer implements IAffectable {
+class FightPlayer extends AEntity implements IAffectable {
   private _player: Player;
   private _actionsTaken: number[] = [];
   private _actions: Action.Action[];
@@ -391,13 +384,14 @@ class FightPlayer implements IAffectable {
     return this._actions;
   }
   constructor(player: Player, playerPos: Pos) {
+    super(player.baseStats);
     this._player = player;
     this._player.pos = playerPos;
     this._actions = Action.player_actions;
   }
-  getHTMLText(): string {
-    return this.player.baseStats.getHTMLText();
-  }
+  // getHTMLText(): string {
+  //   return this.player.baseStats.getHTMLText();
+  // }
 }
 
 class FightInstance {
@@ -437,7 +431,7 @@ class FightInstance {
   }
   addPlayer(player: Player, playerPos: Pos) {
     this._player = new FightPlayer(player, playerPos);
-    this._playerTempPos = new Pos(playerPos.x, playerPos.y);
+    this._playerTempPos = new Pos(playerPos.row, playerPos.col);
   }
 }
 
@@ -464,7 +458,7 @@ class Fight {
     fightInstance.addPlayer(player, playerPos);
 
     //Set up the Board
-    fightInstance.setUpFightBoard(8, 7, this._boardTemplate);
+    fightInstance.setUpFightBoard(3, 3, this._boardTemplate);
     return fightInstance;
   }
 }

@@ -8,7 +8,7 @@
   "include": [
     "src/main.ts",
     "src/logic/*.ts",
-    "src/GUI/common.ts",
+    "src/GUI/*.ts",
     "src/GUI/fight/*.ts",
     "src/controller/*.ts"
   ]

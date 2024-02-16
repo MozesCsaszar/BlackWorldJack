@@ -1,67 +1,307 @@
 namespace ActionBarGUIs {
-  class AreaGridCellGUI {
-    static readonly _divClass: string = ".cell";
+  abstract class AEntityTileGUI {
+    protected _healthBar: JQuery<HTMLElement>;
+    protected _staminaBar: JQuery<HTMLElement>;
+    protected _manaBar: JQuery<HTMLElement>;
+    protected _nameText: JQuery<HTMLElement>;
+    protected _modifiersColumn: JQuery<HTMLElement>;
+    protected _statsText: JQuery<HTMLElement>;
+
+    protected _div: JQuery<HTMLElement>;
+
+    protected _entity: AEntity;
+
+    display(): void {
+      if (this._entity == undefined) {
+        this._div.hide();
+      } else {
+        this.update();
+        if (this._div.is(":hidden")) {
+          this._div.show();
+        }
+      }
+    }
+    protected _getBarFillPercent(current: number, max: number) {
+      return max != 0 ? ((current / max) * 100).toFixed(1) + "%" : 0;
+    }
+    updateInfo(): void {
+      console.log(this._entity.baseStats, this._entity.currentStats);
+      // update entity bars
+      this._healthBar.css(
+        "width",
+        this._getBarFillPercent(
+          this._entity.currentStats.health,
+          this._entity.baseStats.health
+        )
+      );
+      this._staminaBar.css(
+        "width",
+        this._getBarFillPercent(
+          this._entity.currentStats.stamina,
+          this._entity.baseStats.stamina
+        )
+      );
+      this._manaBar.css(
+        "width",
+        this._getBarFillPercent(
+          this._entity.currentStats.mana,
+          this._entity.baseStats.mana
+        )
+      );
+      this._statsText.html(this._entity.currentStats.getHTMLStats());
+    }
+    abstract setUpInfo(): void;
+    abstract updateNextMove(): void;
+    update(): void {
+      this.updateNextMove();
+      this.updateInfo();
+    }
+    setUpForFight(entity: AEntity): void {
+      this.setUpInfo();
+    }
+  }
+  class EnemyTileGUI extends AEntityTileGUI {
+    setUpInfo(): void {
+      this._nameText.text(this._entity.name);
+    }
+    protected _nextMoveSymbols: JQuery<HTMLElement>;
+    protected _nextMoveCells: JQuery<HTMLElement>[][] = [];
+    protected _rewardText: JQuery<HTMLElement>;
+
+    protected _entity: Enemy.EnemyWithLevel;
+
+    constructor(parent: JQuery<HTMLElement>) {
+      super();
+      this._div = JQueryUtils.createDiv({
+        htmlClass: "enemy-tile",
+        parent: parent,
+      });
+      let top: JQuery<HTMLElement> = JQueryUtils.createDiv({
+        htmlClass: "enemy-tile-top",
+        parent: this._div,
+      });
+      this._nameText = JQueryUtils.createDiv({
+        htmlClass: "enemy-tile-name",
+        parent: top,
+      });
+      // rewards
+      this._rewardText = JQueryUtils.createDiv({
+        htmlClass: "enemy-tile-rewards",
+        parent: top,
+      });
+      let bottom = JQueryUtils.createDiv({
+        htmlClass: "enemy-tile-bottom",
+        parent: this._div,
+      });
+      let left = JQueryUtils.createDiv({
+        htmlClass: "enemy-tile-bottom-left",
+        parent: bottom,
+      });
+      this._modifiersColumn = JQueryUtils.createDiv({
+        htmlClass: "entity-tile-modifiers",
+        parent: bottom,
+      });
+      this._statsText = JQueryUtils.createDiv({
+        htmlClass: "entity-tile-stats",
+        parent: left,
+      });
+      bottom = JQueryUtils.createDiv({
+        htmlClass: "enemy-tile-bottom-left-bottom",
+        parent: left,
+      });
+      // status bars (health, stamina, mana)
+      left = JQueryUtils.createDiv({
+        htmlClass: "enemy-tile-status-bars",
+        parent: bottom,
+      });
+      let bar = JQueryUtils.createDiv({
+        htmlClass: "entity-tile-hp",
+        parent: left,
+      });
+      this._healthBar = JQueryUtils.createDiv({
+        htmlClass: "entity-tile-hp-bar",
+        parent: bar,
+      });
+      bar = JQueryUtils.createDiv({
+        htmlClass: "entity-tile-sta",
+        parent: left,
+      });
+      this._staminaBar = JQueryUtils.createDiv({
+        htmlClass: "entity-tile-sta-bar",
+        parent: bar,
+      });
+      bar = JQueryUtils.createDiv({
+        htmlClass: "entity-tile-mp",
+        parent: left,
+      });
+      this._manaBar = JQueryUtils.createDiv({
+        htmlClass: "entity-tile-mp-bar",
+        parent: bar,
+      });
+      // next move cell
+      let right = JQueryUtils.createDiv({
+        htmlClass: "enemy-tile-next-move-cell",
+        parent: bottom,
+      });
+      this._nextMoveSymbols = JQueryUtils.createDiv({
+        htmlClass: "enemy-tile-next-move-symbols",
+        parent: right,
+      });
+      bottom = JQueryUtils.createDiv({
+        htmlClass: "enemy-tile-next-move-cells",
+        parent: right,
+      });
+      for (let i = 0; i < 3; i++) {
+        let row = JQueryUtils.createDiv({
+          htmlClass: `enemy-tile-next-move-row _${i}`,
+          parent: bottom,
+        });
+        this._nextMoveCells.push([]);
+        for (let j = 0; j < 3; j++) {
+          this._nextMoveCells[i].push(
+            JQueryUtils.createDiv({
+              htmlClass: `enemy-tile-next-move-row-cell _${j}`,
+              parent: row,
+            })
+          );
+        }
+      }
+    }
+
+    updateExceptNextMove(): void {
+      throw new Error("Method not implemented.");
+    }
+    updateNextMove(): void {
+      throw new Error("Method not implemented.");
+    }
+    setUpForFight(entity: Enemy.EnemyWithLevel): void {
+      this._entity = entity;
+    }
+  }
+  class PlayerTileGUI extends AEntityTileGUI {
+    setUpInfo(): void {
+      this._nameText.text("Player");
+    }
+    protected _entity: FightPlayer;
+    constructor(parent: JQuery<HTMLElement>) {
+      super();
+      this._div = JQueryUtils.createDiv({
+        htmlClass: "player-tile",
+        parent: parent,
+      });
+      let left: JQuery<HTMLElement> = JQueryUtils.createDiv({
+        htmlClass: "player-tile-left",
+        parent: this._div,
+      });
+      this._modifiersColumn = JQueryUtils.createDiv({
+        htmlClass: "entity-tile-modifiers",
+        parent: this._div,
+      });
+      this._nameText = JQueryUtils.createDiv({
+        htmlClass: "player-tile-name",
+        parent: left,
+      });
+
+      let bottom = JQueryUtils.createDiv({
+        htmlClass: "player-tile-left-bottom",
+        parent: left,
+      });
+      // stats
+      this._statsText = JQueryUtils.createDiv({
+        htmlClass: "entity-tile-stats",
+        parent: bottom,
+      });
+      left = JQueryUtils.createDiv({
+        htmlClass: "player-tile-status-bars",
+        parent: bottom,
+      });
+      let bar = JQueryUtils.createDiv({
+        htmlClass: "entity-tile-hp",
+        parent: left,
+      });
+      this._healthBar = JQueryUtils.createDiv({
+        htmlClass: "entity-tile-hp-bar",
+        parent: bar,
+      });
+      bar = JQueryUtils.createDiv({
+        htmlClass: "entity-tile-sta",
+        parent: left,
+      });
+      this._staminaBar = JQueryUtils.createDiv({
+        htmlClass: "entity-tile-sta-bar",
+        parent: bar,
+      });
+      bar = JQueryUtils.createDiv({
+        htmlClass: "entity-tile-mp",
+        parent: left,
+      });
+      this._manaBar = JQueryUtils.createDiv({
+        htmlClass: "entity-tile-mp-bar",
+        parent: bar,
+      });
+    }
+    // TODO: Implement this
+    updateExceptNextMove(): void {}
+    updateNextMove(): void {}
+    setUpForFight(entity: FightPlayer): void {
+      this._entity = entity;
+      super.setUpForFight(entity);
+      this.display();
+    }
+  }
+
+  class AAreaGridCellGUI {
+    static readonly _divClass: string = "tile";
     static get classFullPath(): string {
       return AreaGridRowGUI.classFullPath + ">" + this._divClass;
     }
 
-    private _div: HTMLElement;
-    private _row: number;
-    private _col: number;
-    private _tile: ATile;
+    protected _div: JQuery<HTMLElement>;
+    protected _entityTileGUI: AEntityTileGUI;
+    protected _row: number;
+    protected _col: number;
+    protected _tile: ATile;
 
     get tile(): ATile {
       return this._tile;
     }
 
-    constructor(div: HTMLElement, row: number, col: number) {
-      this._div = div;
+    constructor(parent: JQuery<HTMLElement>, row: number, col: number) {
+      this._div = JQueryUtils.createDiv({
+        htmlClass: AAreaGridCellGUI._divClass,
+        parent: parent,
+      });
+
       this._row = row;
       this._col = col;
       this.setUpEventListeners();
     }
-    private setUpEventListeners() {
-      this._div.addEventListener("mouseenter", (e) => this.onMouseEnter(e));
-      this._div.addEventListener("mouseleave", (e) => this.onMouseLeave(e));
-      this._div.addEventListener("mousedown", (e) => this.onMouseDown(e));
+    protected setUpEventListeners() {
+      this._div.on("mouseenter", (e) => this.onMouseEnter());
+      this._div.on("mouseleave", (e) => this.onMouseLeave());
     }
-    onMouseEnter(e: MouseEvent) {
+    onMouseEnter() {
       if (!DragAPI.dragging) {
-        this._div.style.borderColor = "rgb(0,0,255)";
+        this._div.css("border-color", "rgb(0,0,255)");
         ActionBarAreaGridGUI.cursorPos = new Pos(this._col, this._row);
-        ActionBarAreaGridGUI._self.updateActionPattern();
       }
     }
-    onMouseLeave(e: MouseEvent) {
+    onMouseLeave() {
       if (!DragAPI.dragging) {
-        this._div.style.borderColor = "green";
-      }
-    }
-    onMouseDown(e: MouseEvent) {
-      if (e.button == 0) {
-        ActionBarAreaGridGUI._self.actionPatternNext();
-      } else if (e.button == 2) {
-        ActionBarAreaGridGUI._self.actionPatternPrev();
+        this._div.css("border-color", "green");
       }
     }
     setUpFightCell(board: FightBoard) {
       this._tile = board.tiles[this._row][this._col];
+      this._entityTileGUI.setUpForFight(this._tile.entity?.entity);
       this.display();
     }
     display() {
-      this._div.innerText = this._tile.entities
-        .map((e: OnTileEntity) => {
-          if (e.entity instanceof Enemy.EnemyWithLevel) {
-            return e.entity.symbol;
-          } else {
-            return " P";
-          }
-        })
-        .join(" ");
       // style the tile
       this._tile.backgroundStye.applyStyle(this._div);
+      this._entityTileGUI.display();
     }
-    enter(entity: IEntity) {
+    enter(entity: AEntity) {
       // add entity to tile
       this._tile.enter(entity);
       // change entity position
@@ -69,13 +309,13 @@ namespace ActionBarGUIs {
       // display changes
       this.display();
     }
-    exit(entity: IEntity) {
+    exit(entity: AEntity) {
       // remove entity from tile
       this._tile.exit(entity);
       // display changes
       this.display();
     }
-    applyToExcept(effect: IEntityEffect, entity: IEntity) {
+    applyToExcept(effect: IEntityEffect, entity: AEntity) {
       this._tile.applyToExcept(effect, entity);
       // display changes
       this.display();
@@ -85,41 +325,57 @@ namespace ActionBarGUIs {
      * Reset the looks of the cell to it's original
      */
     reset() {
-      this._div.style.borderColor = "green";
+      this._div.css("border-color", "green");
     }
 
     setBacgroundColor(color: string) {
-      this._div.style.borderColor = color;
+      this._div.css("border-color", color);
+    }
+  }
+
+  class AreaGridEnemyCellGUI extends AAreaGridCellGUI {
+    constructor(parent: JQuery<HTMLElement>, row: number, col: number) {
+      super(parent, row, col);
+      this._entityTileGUI = new EnemyTileGUI(this._div);
+    }
+  }
+
+  class AreaGridPlayerCellGUI extends AAreaGridCellGUI {
+    constructor(parent: JQuery<HTMLElement>, row: number, col: number) {
+      super(parent, row, col);
+      this._entityTileGUI = new PlayerTileGUI(this._div);
     }
   }
 
   class AreaGridRowGUI {
-    static readonly _divClass: string = ".row";
-    private static readonly _rowOffset: number = 28;
+    static readonly _divClass: string = "row";
     static get classFullPath(): string {
       return ActionBarAreaGridGUI.fullPath + ">" + this._divClass;
     }
 
-    private _div: HTMLElement;
-    private _cellGUIs: AreaGridCellGUI[] = [];
+    private _div: JQuery<HTMLElement>;
+    private _cellGUIs: AAreaGridCellGUI[] = [];
+    private _row: number;
     get cellGUIs() {
       return this._cellGUIs;
     }
-    constructor(div: HTMLElement, nr: number, offsetInd: number) {
-      this._div = div;
-      this._div.style.left =
-        (offsetInd * AreaGridRowGUI._rowOffset).toString() + "px";
-      document
-        .querySelectorAll(
-          AreaGridRowGUI.classFullPath +
-            "._" +
-            nr +
-            ">" +
-            AreaGridCellGUI._divClass
-        )
-        .forEach((e, i) =>
-          this._cellGUIs.push(new AreaGridCellGUI(e as HTMLElement, nr, i))
-        );
+    constructor(parent: JQuery<HTMLElement>, row: number) {
+      this._row = row;
+      this._div = JQueryUtils.createDiv({
+        htmlClass: `${AreaGridRowGUI._divClass} _${row}`,
+        parent: parent,
+      });
+
+      for (let i = 0; i < ActionBarAreaGridGUI.cols; i++) {
+        if (row != 2)
+          this._cellGUIs.push(
+            new AreaGridEnemyCellGUI(this._div, this._row, i)
+          );
+        else
+          this._cellGUIs.push(
+            new AreaGridPlayerCellGUI(this._div, this._row, i)
+          );
+      }
     }
     setUpFightCell(col: number, board: FightBoard) {
       this._cellGUIs[col].setUpFightCell(board);
@@ -133,34 +389,41 @@ namespace ActionBarGUIs {
   }
 
   export class ActionBarAreaGridGUI {
-    static readonly _divID: string = "FSActionBarAreaGrid";
-    static _self: ActionBarAreaGridGUI;
+    static readonly divID: string = "FSActionBarAreaGrid";
+    static self: ActionBarAreaGridGUI;
+    static readonly rows: number = 3;
+    static readonly cols: number = 3;
     private static _nrInstances: number = 0;
     static cursorPos: Pos = new Pos(0, 0);
 
     static get fullPath(): string {
-      return ActionBarGUI.fullPath + ">#" + this._divID;
+      return ActionBarGUI.fullPath + ">#" + this.divID;
     }
 
-    private _div: HTMLElement;
+    private _div: JQuery<HTMLElement>;
     private _rowGUIs: AreaGridRowGUI[] = [];
     private _fightInstance: FightInstance = undefined;
     private _playerAction: Action.Action = undefined;
-    constructor() {
+    constructor(parent: JQuery<HTMLElement>) {
       if (ActionBarAreaGridGUI._nrInstances > 0) {
         throw "ActionBarAreaGridGUI already has an instance running!";
       }
 
       ActionBarAreaGridGUI._nrInstances += 1;
-      ActionBarAreaGridGUI._self = this;
+      ActionBarAreaGridGUI.self = this;
 
-      this._div = document.getElementById(ActionBarAreaGridGUI._divID);
+      this._div = JQueryUtils.createDiv({
+        htmlID: ActionBarAreaGridGUI.divID,
+        parent: parent,
+      });
+
+      for (let i = 0; i < ActionBarAreaGridGUI.rows; i++) {
+        this._rowGUIs.push(new AreaGridRowGUI(this._div, i));
+      }
       document
         .querySelectorAll(AreaGridRowGUI.classFullPath)
         .forEach((e, i, l) => {
-          this._rowGUIs.push(
-            new AreaGridRowGUI(e as HTMLElement, i, l.length - i - 1)
-          );
+          this._rowGUIs.push(new AreaGridRowGUI(this._div, i));
         });
     }
     setUpFightBoard(fightInstance: FightInstance) {
@@ -173,7 +436,7 @@ namespace ActionBarGUIs {
     }
     endPlayerTurn(): void {
       let playerPos = this._fightInstance.playerPos;
-      this._rowGUIs[playerPos.y].cellGUIs[playerPos.x].tile.stay(
+      this._rowGUIs[playerPos.row].cellGUIs[playerPos.col].tile.stay(
         this._fightInstance.player.player
       );
     }
@@ -198,20 +461,12 @@ namespace ActionBarGUIs {
         this._playerAction.pattern.pattern
           .getCurrentOccupiedSpaces(this._fightInstance.playerPos)
           .forEach((element) => {
-            this._rowGUIs[element.pos.y].cellGUIs[
-              element.pos.x
+            this._rowGUIs[element.pos.row].cellGUIs[
+              element.pos.col
             ].setBacgroundColor(
               this._playerAction.pattern.actions.get(element.annotation).color
             );
           });
-      }
-    }
-    updateActionPattern(): void {
-      if (this._playerAction != undefined) {
-        this._playerAction.pattern.chooseClosesConnection(
-          ActionBarAreaGridGUI.cursorPos.sub(this._fightInstance.playerTempPos)
-        );
-        this.displayActionPattern();
       }
     }
     tearDownActionPattern(): void {
@@ -226,11 +481,11 @@ namespace ActionBarGUIs {
         // if we need to move, move there
         if (action instanceof Action.AMoveAction) {
           // exit old tile
-          this._rowGUIs[player.pos.y].cellGUIs[player.pos.x].exit(player);
+          this._rowGUIs[player.pos.row].cellGUIs[player.pos.col].exit(player);
           // enter new tile
-          this._rowGUIs[annPos.pos.y].cellGUIs[annPos.pos.x].enter(player);
+          this._rowGUIs[annPos.pos.row].cellGUIs[annPos.pos.col].enter(player);
         } else if (action instanceof Action.AAttackAction) {
-          this._rowGUIs[annPos.pos.y].cellGUIs[annPos.pos.x].applyToExcept(
+          this._rowGUIs[annPos.pos.row].cellGUIs[annPos.pos.col].applyToExcept(
             action.effect,
             player
           );
@@ -243,32 +498,10 @@ namespace ActionBarGUIs {
       this.reset();
       this._playerAction = undefined;
     }
-    actionPatternNext() {
-      if (this._playerAction != undefined) {
-        if (
-          !this._playerAction.pattern.nextStep(
-            this._fightInstance.playerTempPos
-          )
-        ) {
-          this.finalizeActionPattern();
-        }
-      }
-    }
-    actionPatternPrev() {
-      if (this._playerAction != undefined) {
-        if (
-          !this._playerAction.pattern.prevStep(
-            this._fightInstance.playerTempPos
-          )
-        ) {
-          this.tearDownActionPattern();
-        }
-      }
-    }
   }
 
   export class ActionListElementGUI {
-    static readonly _elementClass: string = ".action_list_element";
+    static readonly _elementClass: string = "action_list_element";
     static readonly _dragObjType: string = "action";
     static readonly _dragProperties: string[] = [
       "width",
@@ -278,7 +511,7 @@ namespace ActionBarGUIs {
       "display",
     ];
     private _action: Action.Action;
-    private _div: HTMLElement;
+    private _div: JQuery<HTMLElement>;
     get action(): Action.Action {
       return this._action;
     }
@@ -286,43 +519,47 @@ namespace ActionBarGUIs {
       this._action = a;
       this.display();
     }
-    constructor(div: HTMLElement) {
-      this._div = div;
+    constructor(parent: JQuery<HTMLElement>) {
+      this._div = JQueryUtils.createDiv({
+        htmlClass: ActionListElementGUI._elementClass,
+        parent: parent,
+      });
       this.setUpEventListeners();
     }
     private setUpEventListeners() {
-      let c_obj: ActionListElementGUI = this;
-      this._div.addEventListener("mousedown", (e: MouseEvent) =>
-        c_obj.onMouseDown(e, c_obj)
-      );
+      this._div.on("mousedown", (e) => this.onMouseDown(e.originalEvent));
     }
+    // TODO: change this to work better!
     display(): void {
-      this._div.innerHTML = this.repr();
+      this._div.html(this.repr());
     }
     repr(): string {
       return this._action != null ? this._action.name : "";
     }
     setHeight(height: number) {
-      this._div.style.height =
-        height -
-        2 * Number(getComputedStyle(this._div).borderWidth.slice(0, -2)) +
-        "px";
+      this._div.css(
+        "height",
+        height - 2 * Number(this._div.css("border-width").slice(0, -2)) + "px"
+      );
     }
-    onMouseDown(e: MouseEvent, c_obj: ActionListElementGUI): void {
-      if (!DragAPI.dragging && c_obj.action != null) {
-        let left: number = c_obj._div.getBoundingClientRect().left - 8;
-        let top: number = c_obj._div.getBoundingClientRect().top - 52;
-        c_obj.setUpDragObject(left, top);
+
+    // TODO: Maybe Don't use inner html object!
+    onMouseDown(e: MouseEvent): void {
+      if (!DragAPI.dragging && this.action != null) {
+        let left: number = this._div[0].getBoundingClientRect().left - 8;
+        let top: number = this._div[0].getBoundingClientRect().top - 52;
+        this.setUpDragObject(left, top);
         DragAPI.startDrag(
           ActionListElementGUI._dragObjType,
-          c_obj.action.save(),
+          this.action.save(),
           e,
           true
         );
       }
     }
+    // TODO: Don't use inner html object!
     setUpDragObject(left: number, top: number): void {
-      let styleSheet = getComputedStyle(this._div);
+      let styleSheet = getComputedStyle(this._div[0]);
       let styleNeeded = new Map<string, string>();
       ActionListElementGUI._dragProperties.forEach((e) => {
         styleNeeded.set(DragAPI.dragPropertyToCSS(e), styleSheet[e]);
@@ -340,27 +577,28 @@ namespace ActionBarGUIs {
     private _listElements: ActionListElementGUI[] = [];
     private _elements: Action.Action[] = [];
     private _currentPage: number;
-    private _div: HTMLElement;
+    private _div: JQuery<HTMLElement>;
 
-    constructor(div: HTMLElement, elementsPerPage: number) {
-      this._div = div;
+    constructor(
+      parent: JQuery<HTMLElement>,
+      id: string,
+      elementsPerPage: number
+    ) {
+      this._div = JQueryUtils.createDiv({ htmlID: id, parent: parent });
       this.elementsPerPage = elementsPerPage;
       this._currentPage = 0;
     }
+    // TODO: Maybe don't use the inner html element
     set elementsPerPage(nr: number) {
       if (nr != this._listElements.length) {
         while (this._listElements.length < nr) {
-          let newDiv: HTMLElement = document.createElement(
-            "div"
-          ) as HTMLElement;
-          newDiv.classList.add(ActionListElementGUI._elementClass.slice(1));
-          this._div.appendChild(newDiv);
-          this._listElements.push(new ActionListElementGUI(newDiv));
+          this._listElements.push(new ActionListElementGUI(this._div));
         }
         while (this._listElements.length > nr) {
           this._listElements.pop();
         }
-        let height: number = this._div.clientHeight / this._listElements.length;
+        let height: number =
+          this._div[0].clientHeight / this._listElements.length;
         this._listElements.forEach((e) => e.setHeight(height));
         this.update();
       }
@@ -414,26 +652,31 @@ namespace ActionBarGUIs {
       return FightScreenGUI.fullPath + ">#" + this._divID;
     }
 
-    private _div: HTMLElement;
+    private _div: JQuery<HTMLElement>;
     private _spellActionList: ActionListGUI;
     private _otherActionList: ActionListGUI;
     private _areaGridGUI: ActionBarAreaGridGUI;
 
-    constructor() {
+    constructor(parent: JQuery<HTMLElement>) {
       if (ActionBarGUI._nrInstances > 0) {
         throw "InfoBarGUI already has an instance running!";
       }
       ActionBarGUI._nrInstances += 1;
       ActionBarGUI._self = this;
-      this._div = document.getElementById(ActionBarGUI._divID);
+      this._div = JQueryUtils.createDiv({
+        htmlID: ActionBarGUI._divID,
+        parent: parent,
+      });
 
       this._spellActionList = new ActionListGUI(
-        document.getElementById(ActionBarGUI._spellListID) as HTMLElement,
+        this._div,
+        "FSActionBarSpellActions",
         ActionBarGUI._nrElementsPerList
       );
-      this._areaGridGUI = new ActionBarAreaGridGUI();
+      this._areaGridGUI = new ActionBarAreaGridGUI(this._div);
       this._otherActionList = new ActionListGUI(
-        document.getElementById(ActionBarGUI._otherListID) as HTMLElement,
+        this._div,
+        "FSActionBarOtherActions",
         ActionBarGUI._nrElementsPerList
       );
       this._otherActionList.elements = Action.player_actions;

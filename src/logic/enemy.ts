@@ -133,7 +133,7 @@ namespace Enemy {
     }
   }
 
-  export class EnemyWithLevel extends IEntity {
+  export class EnemyWithLevel extends AEntity {
     private _body: EnemyBody;
     //private _elitenessModifiers: EnemyBody[] = [];
     private _symbol: string;
@@ -174,9 +174,9 @@ namespace Enemy {
       e.enemyInfo = this._info;
       return e;
     }
-    getHTMLText(): string {
-      return this._baseStats.getHTMLText();
-    }
+    // getHTMLText(): string {
+    //   return this._baseStats.getHTMLText();
+    // }
   }
 
   export class Enemy {
@@ -268,8 +268,9 @@ namespace Enemy {
             new EnemyBody(
               new EntityStats(
                 1,
+                5,
+                0,
                 new ElementalAttributes(),
-                new ElementalAttributes(3),
                 new ElementalAttributes()
               ),
               []

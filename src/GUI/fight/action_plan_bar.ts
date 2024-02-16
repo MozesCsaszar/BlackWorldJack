@@ -5,12 +5,15 @@
 
 namespace ActionPlanBarGUIs {
   class CardGUI {
-    static readonly _divClass: string = ".card";
+    static readonly _divClass: string = "card";
     private _card: Card;
-    private _div: HTMLElement;
-    constructor(div: HTMLElement, card: Card = null) {
+    private _div: JQuery<HTMLElement>;
+    constructor(parent: JQuery<HTMLElement>, card: Card = null) {
       this._card = card;
-      this._div = div;
+      this._div = JQueryUtils.createDiv({
+        htmlClass: CardGUI._divClass,
+        parent: parent,
+      });
     }
     get card(): Card {
       return this._card;
@@ -21,42 +24,46 @@ namespace ActionPlanBarGUIs {
     }
     update(): void {
       if (this.card == null) {
-        this._div.style.display = "none";
+        this._div.css("display", "none");
       } else {
-        this._div.style.display = "block";
-        this._div.innerHTML = this.card.value + "<br>" + this.card.suit;
+        this._div.css("display", "block");
+
+        this._div.html(this.card.value + "<br>" + this.card.suit);
       }
     }
     reset(): void {
-      this._div.textContent = "";
-      this._div.hidden = true;
+      this._div.text("");
+      this._div[0].hidden = true;
       this._card = null;
     }
     setAsTemp(): void {
-      this._div.style.opacity = "0.5";
+      this._div.css("opacity", "0.5");
     }
     setAsPerm(): void {
-      this._div.style.opacity = "1";
+      this._div.css("opacity", "1");
     }
     setLeft(left: number): void {
       //set the left property of style of the div to allow for stylizing the card display format
-      this._div.style.left = left.toString() + "px";
+      this._div.css("left", left + "px");
     }
   }
 
   class HandGUI {
-    static readonly _divClass: string = ".card_holder";
+    private static readonly _divClass: string = "card_holder";
+    private static readonly _nrMaxCards: number = 9;
 
     private _cardGUIs: CardGUI[] = [];
-    private _div: HTMLElement;
+    private _div: JQuery<HTMLElement>;
     private _hand: Hand;
     private _tempHand: Hand;
-    constructor(super_path: string) {
-      let path: string = super_path + ">" + HandGUI._divClass;
-      this._div = document.querySelector(path);
-      document
-        .querySelectorAll(path + ">" + CardGUI._divClass)
-        .forEach((e) => this._cardGUIs.push(new CardGUI(e as HTMLElement)));
+    constructor(parent: JQuery<HTMLElement>) {
+      this._div = JQueryUtils.createDiv({
+        htmlClass: HandGUI._divClass,
+        parent: parent,
+      });
+      for (let i = 0; i < HandGUI._nrMaxCards; i++) {
+        this._cardGUIs.push(new CardGUI(this._div));
+      }
       this._hand = new Hand();
       this._tempHand = new Hand();
       this.stylizeDeck();
@@ -110,9 +117,9 @@ namespace ActionPlanBarGUIs {
   }
 
   class ActionGUI {
-    static readonly _divClass: string = ".action";
+    static readonly _divClass: string = "action";
 
-    private _div: HTMLElement;
+    private _div: JQuery<HTMLElement>;
     private _action: Action.Action = null;
     private _tempAction: Action.Action = null;
     get action(): Action.Action {
@@ -133,18 +140,19 @@ namespace ActionPlanBarGUIs {
     finalizeTemp(): void {
       this.action = this._tempAction;
     }
-    constructor(path: string) {
-      this._div = document.querySelector(
-        path + ">" + ActionGUI._divClass
-      ) as HTMLElement;
+    constructor(parent: JQuery<HTMLElement>) {
+      this._div = JQueryUtils.createDiv({
+        htmlClass: ActionGUI._divClass,
+        parent: parent,
+      });
       this._action = null;
     }
     update(basedOnTemp = false): void {
       let a: Action.Action = basedOnTemp ? this._tempAction : this._action;
       if (a == null) {
-        this._div.innerHTML = "";
+        this._div.html("");
       } else {
-        this._div.innerHTML = a.name;
+        this._div.html(a.name);
       }
     }
     reset(): void {
@@ -154,18 +162,21 @@ namespace ActionPlanBarGUIs {
   }
 
   class ActionSpaceGUI {
-    static readonly _divClass: string = ".action_card_space";
+    static readonly _divClass: string = "action_card_space";
 
     private _entered: boolean = false;
     private _actionGUI: ActionGUI;
     private _handGUI: HandGUI;
-    private _div: HTMLElement;
-    constructor(nr: string) {
-      this._handGUI = new HandGUI(ActionSpaceGUI._divClass + "._" + nr);
-      this._actionGUI = new ActionGUI(ActionSpaceGUI._divClass + "._" + nr);
-      this._div = document.querySelector(
-        ActionSpaceGUI._divClass + "._" + nr
-      ) as HTMLElement;
+    private _div: JQuery<HTMLElement>;
+    constructor(parent: JQuery<HTMLElement>, nr: number) {
+      this._div = JQueryUtils.createDiv({
+        htmlClass: `${ActionSpaceGUI._divClass} _${nr}`,
+        parent: parent,
+      });
+
+      this._actionGUI = new ActionGUI(this._div);
+      this._handGUI = new HandGUI(this._div);
+
       this.setUpEventListeners();
       this.update();
     }
@@ -176,76 +187,67 @@ namespace ActionPlanBarGUIs {
       return this.busted || this._handGUI.final;
     }
     private setUpEventListeners() {
-      let c_obj: ActionSpaceGUI = this;
-      c_obj._div.addEventListener("mousedown", (e: MouseEvent) =>
-        c_obj.onMouseDown(e, c_obj)
-      );
-      c_obj._div.addEventListener("mouseenter", (e: MouseEvent) =>
-        c_obj.onMouseEnter(e, c_obj)
-      );
-      c_obj._div.addEventListener("mouseleave", (e: MouseEvent) =>
-        c_obj.onMouseLeave(e, c_obj)
-      );
-      c_obj._div.addEventListener("mouseup", (e: MouseEvent) =>
-        c_obj.onMouseUp(e, c_obj)
-      );
+      this._div.on("mousedown", (e) => this.onMouseDown(e.originalEvent));
+      this._div.on("mouseenter", (e) => this.onMouseEnter(e.originalEvent));
+      this._div.on("mouseleave", (e) => this.onMouseLeave(e.originalEvent));
+      this._div.on("mouseup", (e) => this.onMouseUp(e.originalEvent));
     }
-    onMouseDown(e: MouseEvent, c_obj: ActionSpaceGUI) {
+    onMouseDown(e: MouseEvent) {
       if (
         e.button == 0 &&
-        c_obj._actionGUI.action != null &&
+        this._actionGUI.action != null &&
         DragAPI.dragObjectType == null
       ) {
-        ActionBarGUIs.ActionBarAreaGridGUI._self.setUpActionPattern(
-          c_obj._actionGUI.action.name
+        ActionBarGUIs.ActionBarAreaGridGUI.self.setUpActionPattern(
+          this._actionGUI.action.name
         );
       }
     }
-    onMouseEnter(e: MouseEvent, c_obj: ActionSpaceGUI) {
+    onMouseEnter(e: MouseEvent) {
       if (
         DragAPI.dragObjectType == DeckGUI._dragObjType &&
-        !c_obj._handGUI.busted
+        !this._handGUI.busted
       ) {
-        c_obj._handGUI.addTempCard(Card.load(DragAPI.dragObjectData));
-        c_obj.update();
+        this._handGUI.addTempCard(Card.load(DragAPI.dragObjectData));
+        this.update();
         DragAPI.enterDragDestinationArea();
       } else if (
         DragAPI.dragObjectType ==
         ActionBarGUIs.ActionListElementGUI._dragObjType
       ) {
-        c_obj._actionGUI.tempAction = Action.player_actions.find(
+        this._actionGUI.tempAction = Action.player_actions.find(
           (action) => action.name == DragAPI.dragObjectData
         );
         DragAPI.enterDragDestinationArea();
       }
     }
-    onMouseLeave(e: MouseEvent, c_obj: ActionSpaceGUI) {
+    onMouseLeave(e: MouseEvent) {
       if (
         DragAPI.dragObjectType == DeckGUI._dragObjType &&
         DragAPI.insideDragDestinationArea
       ) {
-        c_obj._handGUI.removeTempCard();
-        c_obj.update();
+        this._handGUI.removeTempCard();
+        this.update();
         DragAPI.exitDragDestinationArea();
       } else if (
         DragAPI.dragObjectType ==
           ActionBarGUIs.ActionListElementGUI._dragObjType &&
         DragAPI.insideDragDestinationArea
       ) {
-        c_obj._actionGUI.removeTemp();
+        this._actionGUI.removeTemp();
         DragAPI.exitDragDestinationArea();
       }
     }
-    onMouseUp(e: MouseEvent, c_obj: ActionSpaceGUI) {
+    onMouseUp(e: MouseEvent) {
       if (DragAPI.canDropHere(DeckGUI._dragObjType) && !this._handGUI.busted) {
-        c_obj._handGUI.finalizeTempCard();
+        this._handGUI.finalizeTempCard();
         ActionHolderGUI.setFinalAll();
-        c_obj._entered = false;
+        this._entered = false;
         DragAPI.endDrag();
       } else if (
         DragAPI.canDropHere(ActionBarGUIs.ActionListElementGUI._dragObjType)
       ) {
-        c_obj._actionGUI.finalizeTemp();
+        this._actionGUI.finalizeTemp();
         DragAPI.endDrag();
       }
     }
@@ -254,20 +256,20 @@ namespace ActionPlanBarGUIs {
       this._actionGUI.update();
       let value = this._handGUI.tempValue;
       if (value < 14) {
-        this._div.style.border = "dashed red 5px";
+        this._div.css("border", "dashed red 5px");
       } else if (value < 21) {
-        this._div.style.border = "dashed green 5px";
+        this._div.css("border", "dashed green 5px");
       } else if (value == 21) {
-        this._div.style.border = "solid green 5px";
+        this._div.css("border", "solid green 5px");
       } else {
-        this._div.style.border = "solid red 5px";
+        this._div.css("border", "solid red 5px");
       }
     }
     show(): void {
-      this._div.style.display = "flex";
+      this._div.css("display", "flex");
     }
     hide(): void {
-      this._div.style.display = "none";
+      this._div.css("display", "none");
     }
     endPlayerTurn(): void {
       this._handGUI.endPlayerTurn();
@@ -277,7 +279,7 @@ namespace ActionPlanBarGUIs {
   }
 
   class DeckGUI {
-    static readonly _divClass: string = ".deck";
+    static readonly _divClass: string = "deck";
     static readonly _dragObjType: string = "card";
     static readonly _dragProperties: string[] = [
       "width",
@@ -286,10 +288,13 @@ namespace ActionPlanBarGUIs {
       "backgroundColor",
     ];
 
-    private _div: HTMLElement;
+    private _div: JQuery<HTMLElement>;
     private _deck: Deck;
-    constructor(div: HTMLElement) {
-      this._div = div;
+    constructor(parent: JQuery<HTMLElement>) {
+      this._div = JQueryUtils.createDiv({
+        htmlClass: DeckGUI._divClass,
+        parent: parent,
+      });
       this._deck = new Deck();
       this.setUpEventListeners();
     }
@@ -301,24 +306,21 @@ namespace ActionPlanBarGUIs {
       this._deck.setContentSuitsValuesMana(suits, values, manaType);
     }
     private setUpEventListeners(): void {
-      let c_obj: DeckGUI = this;
-      this._div.addEventListener("mousedown", (e: MouseEvent) =>
-        c_obj.onMouseDown(e, c_obj)
-      );
+      this._div.on("mousedown", (e) => this.onMouseDown(e.originalEvent));
     }
-    onMouseDown(e: MouseEvent, c_obj: DeckGUI): void {
+    onMouseDown(e: MouseEvent): void {
       if (DragAPI.canStartDrag()) {
         if (!ActionPlanBarGUI._finalAll) {
-          let left: number = c_obj._div.getBoundingClientRect().left - 6;
-          let top: number = c_obj._div.getBoundingClientRect().top - 52;
-          let c: Card = c_obj._deck.draw();
+          let left: number = this._div[0].getBoundingClientRect().left - 6;
+          let top: number = this._div[0].getBoundingClientRect().top - 52;
+          let c: Card = this._deck.draw();
           this.setUpDragObject(left, top, c);
           DragAPI.startDrag(DeckGUI._dragObjType, c.save(), e);
         }
       }
     }
     setUpDragObject(left: number, top: number, card: Card): void {
-      let styleSheet = getComputedStyle(this._div);
+      let styleSheet = getComputedStyle(this._div[0]);
       let styleNeeded = new Map<string, string>();
       DeckGUI._dragProperties.forEach((e) => {
         styleNeeded.set(DragAPI.dragPropertyToCSS(e), styleSheet[e]);
@@ -335,10 +337,10 @@ namespace ActionPlanBarGUIs {
       return card.HTMLString;
     }
     show(): void {
-      this._div.style.display = "grid";
+      this._div.css("display", "grid");
     }
     hide(): void {
-      this._div.style.display = "none";
+      this._div.css("display", "none");
     }
     endPlayerTurn(): void {
       this.setContentSuitsValuesMana(Deck.suits, Deck.values);
@@ -349,21 +351,20 @@ namespace ActionPlanBarGUIs {
     static readonly _divClass: string = ".deck_holder";
 
     private static _currentDeckGUIs: number = 1;
-    private _deckGUIs: DeckGUI[] = [];
+    private static readonly _nrDeckGUIs: number = 3;
 
-    constructor() {
+    private _deckGUIs: DeckGUI[] = [];
+    private _div: JQuery<HTMLElement>;
+
+    constructor(parent: JQuery<HTMLElement>) {
+      this._div = JQueryUtils.createDiv({
+        htmlClass: "deck_holder",
+        parent: parent,
+      });
       //set up deck GUI's
-      document
-        .querySelectorAll(
-          "#FightScreenActionPlanBar" +
-            ">" +
-            DeckHolderGUI._divClass +
-            ">" +
-            DeckGUI._divClass
-        )
-        .forEach((e: Element) => {
-          this._deckGUIs.push(new DeckGUI(e as HTMLElement));
-        });
+      for (let i = 0; i < DeckHolderGUI._nrDeckGUIs; i++) {
+        this._deckGUIs.push(new DeckGUI(this._div));
+      }
       this._deckGUIs[0].setContentSuitsValuesMana(Deck.suits, Deck.values);
       this.update();
     }
@@ -385,16 +386,18 @@ namespace ActionPlanBarGUIs {
 
   class ActionHolderGUI {
     private static _currentActionGUIs: number = 7;
+    private static readonly _nrActionGUIs: number = 7;
     //private static _actionGUIConfig:number[][] = [[], [2], [1, 3], [1, 2, 3], [0, 1, 3, 4], [0, 1, 2, 3, 4], [0, 1, 3, 4, 5, 6], [0, 1, 2, 3, 4, 5, 6]]
     private static _actionGUIs: ActionSpaceGUI[] = [];
 
-    constructor(superDivID: string) {
-      //set up deck GUI's
-      document
-        .querySelectorAll(superDivID + ">" + ActionSpaceGUI._divClass)
-        .forEach((e: Element, i: number) => {
-          ActionHolderGUI._actionGUIs.push(new ActionSpaceGUI(i.toString()));
-        });
+    private _div: JQuery<HTMLElement>;
+
+    constructor(parent: JQuery<HTMLElement>) {
+      this._div = parent;
+      for (let i = 0; i < ActionHolderGUI._nrActionGUIs; i++) {
+        ActionHolderGUI._actionGUIs.push(new ActionSpaceGUI(this._div, i));
+      }
+
       this.update();
     }
     static setFinalAll(): void {
@@ -430,15 +433,20 @@ namespace ActionPlanBarGUIs {
   }
 
   export class ActionPlanBarGUI {
-    static readonly _divID: string = "#FightScreenActionPlanBar";
+    static readonly _divID: string = "FightScreenActionPlanBar";
     static _finalAll: boolean = false;
 
+    private _div: JQuery<HTMLElement>;
     private _deckHolderGUI: DeckHolderGUI;
     private _actionHolderGUI: ActionHolderGUI;
 
-    constructor() {
-      this._deckHolderGUI = new DeckHolderGUI();
-      this._actionHolderGUI = new ActionHolderGUI(ActionPlanBarGUI._divID);
+    constructor(parent: JQuery<HTMLElement>) {
+      this._div = JQueryUtils.createDiv({
+        htmlID: ActionPlanBarGUI._divID,
+        parent: parent,
+      });
+      this._actionHolderGUI = new ActionHolderGUI(this._div);
+      this._deckHolderGUI = new DeckHolderGUI(this._div);
     }
     setUpFight(fightInstance: FightInstance) {
       this._actionHolderGUI.setUpFight(fightInstance.player);
